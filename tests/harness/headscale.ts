@@ -120,6 +120,8 @@ export async function startHeadscale(options: {
   config?: Record<string, unknown>;
   // Serves HTTPS on 443, as nodes need.
   tls?: boolean;
+  // Applied only to this Headscale container (for scoped fault injection).
+  environment?: Record<string, string>;
   records?: Array<{ name: string; type: string; value: string }>;
   // Puts Headscale's policy in `file` mode with this content.
   policyFile?: string;
@@ -152,11 +154,27 @@ export async function startHeadscale(options: {
           auto_update_enabled: false,
         },
       }
-    : {};
+    : {
+        derp: {
+          server: { enabled: false },
+          urls: [],
+          paths: ["/etc/headscale/control-only-derp.yaml"],
+          auto_update_enabled: false,
+        },
+      };
 
   if (tls) {
     await writeFile(join(configDir, "tls.crt"), tls.cert, { mode: 0o644 });
     await writeFile(join(configDir, "tls.key"), tls.key, { mode: 0o644 });
+  } else {
+    // Headscale requires a region at startup. API/agent fixtures need no relay;
+    // advertise no nodes instead of downloading a public map. Native YAML
+    // requires numeric region keys, unlike JSON's quoted object keys.
+    await writeFile(
+      join(configDir, "control-only-derp.yaml"),
+      "regions:\n  999:\n    regionid: 999\n    regioncode: control-only\n    regionname: Control-only fixture (no relay)\n    nodes: []\n",
+      { mode: 0o644 },
+    );
   }
 
   if (options.policyFile !== undefined) {
@@ -188,6 +206,7 @@ export async function startHeadscale(options: {
       .withExposedPorts({ container: containerPort, host: port })
       .withBindMounts([{ source: configDir, target: "/etc/headscale" }])
       .withLabels({ [HARNESS_LABEL]: options.id })
+      .withEnvironment(options.environment ?? {})
       .withWaitStrategy(
         tls
           ? tc.Wait.forHttp("/health", containerPort).usingTls().allowInsecure().forStatusCode(200)

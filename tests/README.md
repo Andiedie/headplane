@@ -46,6 +46,19 @@ with pre-auth keys. A node can advertise routes, an exit node, tags, or SSH.
 `node.down()` and `node.up()` switch it off and on. `tailnet.pendingNode()`
 starts one that waits for interactive registration.
 
+Direct `startHeadscale()` calls without TLS use a control-only fixture for API,
+Agent registration/sync, and Docker restart tests. It loads a local native YAML
+DERP map with one region and no nodes: Headscale requires a region at startup,
+but this fixture provides no relay and does not download the public DERP map.
+Use `createTailnet()` for node traffic or Browser SSH; its TLS fixture retains
+the real embedded DERP server. Explicit `config.derp` overrides still take
+precedence. The standalone `headscaleConfig()` builder is unchanged.
+
+`platform/headscale-startup.test.ts` blocks external HTTPS through a dead proxy
+only inside its own Headscale container, then checks real API writes and reads
+before and after a restart. Run it with
+`pnpm exec vitest run --project integration:app tests/integration/platform/headscale-startup.test.ts`.
+
 Browser SSH tests in `tests/integration/ssh` build `hp_ssh.wasm` and run it in
 a Node container on the tailnet's network, standing in for the browser
 (`tests/harness/browser-ssh.ts`). It joins and opens a session the same way the
