@@ -4,6 +4,8 @@ import { Restty } from "restty";
 import type { GhosttyTheme } from "restty";
 import type { PtyTransport } from "restty/internal";
 
+import { useI18n } from "~/i18n/react";
+
 // Ghostty's default canvas background is rgb(20,23,26) — a dark gray, not black.
 // Override it so the terminal matches the page and pane container backgrounds.
 const HEADPLANE_THEME: GhosttyTheme = {
@@ -87,6 +89,7 @@ interface GhosttyProps {
 }
 
 export default function Ghostty({ ipn, ipAddress, username, onConnected, onOutput }: GhosttyProps) {
+  const { t } = useI18n();
   const divRef = useRef<HTMLDivElement>(null);
   const fontBase = useHref("/fonts");
 
@@ -150,5 +153,12 @@ export default function Ghostty({ ipn, ipAddress, username, onConnected, onOutpu
     };
   }, [ipn, ipAddress, username, onConnected, onOutput, fontBase]);
 
-  return <div className="min-h-0 min-w-0 flex-1 overflow-hidden bg-black" ref={divRef} />;
+  return (
+    <div
+      aria-label={t("ssh.terminal")}
+      role="region"
+      className="min-h-0 min-w-0 flex-1 overflow-hidden bg-black"
+      ref={divRef}
+    />
+  );
 }

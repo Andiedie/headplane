@@ -3,8 +3,8 @@ import { Plus } from "lucide-react";
 import ActionDialog from "~/components/action-dialog";
 import Button from "~/components/button";
 import Input from "~/components/input";
+import { useI18n } from "~/i18n/react";
 import { fieldValidator } from "~/utils/form";
-import { USERNAME_RULE } from "~/utils/user";
 
 import { username } from "../schemas";
 
@@ -16,31 +16,32 @@ interface CreateUserProps {
 const validateUsername = fieldValidator(username);
 
 export default function CreateUser({ isOidc, isDisabled }: CreateUserProps) {
+  const { t } = useI18n();
   return (
     <ActionDialog
-      description={`The user is listed under Unlinked Headscale Users until they sign in${
-        isOidc ? " through your OIDC provider" : ""
-      }, which links them to a Headplane account.`}
+      description={t(isOidc ? "users.create.oidcDescription" : "users.create.localDescription")}
       intent="create"
-      submitLabel="Create user"
-      title="Create a Headscale user"
+      submitLabel={t("users.create.submit")}
+      title={t("users.create.title")}
       trigger={
         <Button disabled={isDisabled} variant="primary">
           <Plus className="size-3.5" />
-          Add user
+          {t("users.add")}
         </Button>
       }
     >
       <Input
-        description={USERNAME_RULE}
-        label="Username"
+        description={t("users.username.rules")}
+        label={t("users.username")}
         name="name"
         placeholder="my-new-user"
         required
-        validate={validateUsername}
+        validate={(value) =>
+          validateUsername(value) === null ? null : t("users.username.invalid")
+        }
       />
-      <Input label="Display name" name="display_name" placeholder="John Doe" />
-      <Input label="Email" name="email" placeholder="name@example.com" type="email" />
+      <Input label={t("users.displayName")} name="display_name" placeholder="John Doe" />
+      <Input label={t("users.email")} name="email" placeholder="name@example.com" type="email" />
     </ActionDialog>
   );
 }

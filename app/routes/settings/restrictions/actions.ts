@@ -1,5 +1,7 @@
 import * as v from "valibot";
 
+import { translate } from "~/i18n";
+import { translateValidationErrors } from "~/i18n/action-errors";
 import {
   authContext,
   headscaleConfigContext,
@@ -18,7 +20,21 @@ const configPaths = {
   user: { path: "oidc.allowed_users", key: "allowedUsers" },
 } as const;
 
-const labels = { domain: "Domain", group: "Group", user: "User" };
+const successMessages = {
+  domain: { added: "actions.restrictionDomainAdded", removed: "actions.restrictionDomainRemoved" },
+  group: { added: "actions.restrictionGroupAdded", removed: "actions.restrictionGroupRemoved" },
+  user: { added: "actions.restrictionUserAdded", removed: "actions.restrictionUserRemoved" },
+} as const;
+const duplicateErrors = {
+  domain: "errors.restrictionDomainExists",
+  group: "errors.restrictionGroupExists",
+  user: "errors.restrictionUserExists",
+} as const;
+const missingErrors = {
+  domain: "errors.restrictionDomainMissing",
+  group: "errors.restrictionGroupMissing",
+  user: "errors.restrictionUserMissing",
+} as const;
 
 export const restrictionAction = createAction({
   capability: Capabilities.configure_iam,
@@ -28,7 +44,9 @@ export const restrictionAction = createAction({
     const config = context.get(headscaleConfigContext);
     const integration = context.get(integrationContext);
     if (!config.writable()) {
-      throw new ActionError("The Headscale configuration is read-only.", 403);
+      throw new ActionError("The Headscale configuration is read-only.", 403, {
+        key: "errors.configReadOnly",
+      });
     }
 
     function current(type: RestrictionType) {
@@ -41,6 +59,7 @@ export const restrictionAction = createAction({
         throw new ActionError(
           "Saved, but Headscale didn't come back after restarting. Check its logs.",
           502,
+          { key: "errors.restartFailed" },
         );
       }
     }
@@ -50,34 +69,36 @@ export const restrictionAction = createAction({
   intents: {
     add: {
       fields: { type: v.picklist(restrictionTypes), value: v.string() },
-      async handler(input, { current, save }) {
+      async handler(input, { current, save }, locale) {
         const value = parseValues(restrictionValue[input.type], input.value);
         if (!value.ok) {
-          return invalid({ value: value.errors.form });
+          return invalid(translateValidationErrors(locale, { value: value.errors.form }));
         }
 
         const values = current(input.type);
         if (values.includes(value.data)) {
-          return invalid({ value: `This ${input.type} is already in the list.` });
+          return invalid({ value: translate(locale, duplicateErrors[input.type]) });
         }
 
         await save(input.type, [...values, value.data]);
-        return ok(`${labels[input.type]} added`);
+        return ok(translate(locale, successMessages[input.type].added));
       },
     },
     remove: {
       fields: { type: v.picklist(restrictionTypes), value: v.string() },
-      async handler(input, { current, save }) {
+      async handler(input, { current, save }, locale) {
         const values = current(input.type);
         if (!values.includes(input.value)) {
-          throw new ActionError(`This ${input.type} isn't in the list.`);
+          throw new ActionError(`This ${input.type} isn't in the list.`, 400, {
+            key: missingErrors[input.type],
+          });
         }
 
         await save(
           input.type,
           values.filter((value) => value !== input.value),
         );
-        return ok(`${labels[input.type]} removed`);
+        return ok(translate(locale, successMessages[input.type].removed));
       },
     },
   },

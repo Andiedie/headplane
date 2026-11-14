@@ -1,6 +1,7 @@
 import { redirect } from "react-router";
 import * as v from "valibot";
 
+import { translate } from "~/i18n";
 import {
   authContext,
   headscaleContext,
@@ -29,14 +30,18 @@ export const machineAction = createAction({
     async function requireNode(id: string) {
       const node = await api.nodes.get(id).catch((error: unknown) => {
         if (isDataWithApiError(error) && error.data.statusCode === 404) {
-          throw new ActionError("This machine no longer exists.", 404);
+          throw new ActionError("This machine no longer exists.", 404, {
+            key: "errors.machineMissing",
+          });
         }
 
         throw error;
       });
 
       if (!auth.canManageNode(principal, node)) {
-        throw new ActionError("You don't have permission to manage this machine.", 403);
+        throw new ActionError("You don't have permission to manage this machine.", 403, {
+          key: "errors.machinePermissionDenied",
+        });
       }
 
       return node;
@@ -57,12 +62,11 @@ export const machineAction = createAction({
         register_key: v.pipe(v.string(), v.minLength(1, "Paste the machine key.")),
         user: v.pipe(v.string(), v.minLength(1, "Choose an owner.")),
       },
-      async handler(input, { api, refresh }) {
+      async handler(input, { api, refresh }, locale) {
         const registrationKey = normalizeRegistrationKey(input.register_key);
         if (!registrationKey) {
           return invalid({
-            register_key:
-              "Paste the registration URL or full hskey-authreq-... key from tailscale up.",
+            register_key: translate(locale, "errors.registrationKey"),
           });
         }
 
@@ -74,11 +78,11 @@ export const machineAction = createAction({
     rename: {
       fields: { node_id: nodeId, name: machineName },
       auditTarget: "node_id",
-      async handler(input, { api, requireNode, refresh }) {
+      async handler(input, { api, requireNode, refresh }, locale) {
         const node = await requireNode(input.node_id);
         await api.nodes.rename(node.id, input.name);
         await refresh();
-        return ok("Machine renamed");
+        return ok(translate(locale, "actions.machineRenamed"));
       },
     },
     delete: {
@@ -94,45 +98,52 @@ export const machineAction = createAction({
     expire: {
       fields: { node_id: nodeId },
       auditTarget: "node_id",
-      async handler(input, { api, requireNode, refresh }) {
+      async handler(input, { api, requireNode, refresh }, locale) {
         const node = await requireNode(input.node_id);
         await api.nodes.expire(node.id);
         await refresh();
-        return ok("Machine expired");
+        return ok(translate(locale, "actions.machineExpired"));
       },
     },
     toggle_expiry: {
       fields: { node_id: nodeId, disable_expiry: toggle },
       auditTarget: "node_id",
-      async handler(input, { api, capabilities, requireNode, refresh }) {
+      async handler(input, { api, capabilities, requireNode, refresh }, locale) {
         const node = await requireNode(input.node_id);
         const disableExpiry = input.disable_expiry === "true";
 
         // Older versions take this as a request to expire the machine now.
         if (disableExpiry && !capabilities.keyExpiryCanBeDisabled) {
-          throw new ActionError("Turning off key expiry needs Headscale 0.29 or newer.");
+          throw new ActionError("Turning off key expiry needs Headscale 0.29 or newer.", 400, {
+            key: "errors.keyExpiryVersion",
+          });
         }
 
         await api.nodes.toggleExpiry(node.id, disableExpiry);
         await refresh();
-        return ok(disableExpiry ? "Key expiry disabled" : "Key expiry enabled");
+        return ok(
+          translate(
+            locale,
+            disableExpiry ? "actions.keyExpiryDisabled" : "actions.keyExpiryEnabled",
+          ),
+        );
       },
     },
     update_tags: {
       fields: { node_id: nodeId, tags: list() },
       auditTarget: "node_id",
-      async handler(input, { api, requireNode, refresh }) {
+      async handler(input, { api, requireNode, refresh }, locale) {
         const node = await requireNode(input.node_id);
         const tags = input.tags.map((tag) => tag.trim()).filter((tag) => tag !== "");
         await api.nodes.setTags(node.id, tags);
         await refresh();
-        return ok("Tags updated");
+        return ok(translate(locale, "actions.tagsUpdated"));
       },
     },
     update_routes: {
       fields: { node_id: nodeId, routes: list(), enabled: toggle },
       auditTarget: "node_id",
-      async handler(input, { api, requireNode, refresh }) {
+      async handler(input, { api, requireNode, refresh }, locale) {
         const node = await requireNode(input.node_id);
         const routes = input.routes.map((route) => route.trim()).filter((route) => route !== "");
         const approved =
@@ -142,7 +153,7 @@ export const machineAction = createAction({
 
         await api.nodes.approveRoutes(node.id, approved);
         await refresh();
-        return ok("Routes updated");
+        return ok(translate(locale, "actions.routesUpdated"));
       },
     },
     reassign: {
@@ -151,17 +162,19 @@ export const machineAction = createAction({
         user_id: v.pipe(v.string(), v.minLength(1, "Choose an owner.")),
       },
       auditTarget: "node_id",
-      async handler(input, { api, requireNode, refresh }) {
+      async handler(input, { api, requireNode, refresh }, locale) {
         const node = await requireNode(input.node_id);
         if (!api.nodes.reassignUser) {
           throw new ActionError(
             "Changing a machine's owner isn't supported on this Headscale version.",
+            400,
+            { key: "errors.machineOwnerVersion" },
           );
         }
 
         await api.nodes.reassignUser(node.id, input.user_id);
         await refresh();
-        return ok("Owner changed");
+        return ok(translate(locale, "actions.ownerChanged"));
       },
     },
   },

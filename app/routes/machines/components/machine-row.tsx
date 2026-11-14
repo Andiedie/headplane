@@ -11,6 +11,7 @@ import { HeadplaneAgentTag } from "~/components/tags/HeadplaneAgent";
 import { SubnetTag } from "~/components/tags/Subnet";
 import { TailscaleSSHTag } from "~/components/tags/TailscaleSSH";
 import Tooltip from "~/components/tooltip";
+import { useI18n } from "~/i18n/react";
 import type { User } from "~/types";
 import { copyToClipboard } from "~/utils/copy";
 import * as hinfo from "~/utils/host-info";
@@ -46,6 +47,7 @@ export default function MachineRow({
   supportsNodeOwnerChange,
   supportsDisablingKeyExpiry,
 }: Props) {
+  const { locale, t } = useI18n();
   const uiTags = useMemo(() => uiTagsForNode(node, isAgent), [node, isAgent]);
 
   const addresses = useMemo(() => {
@@ -79,7 +81,11 @@ export default function MachineRow({
         </Link>
         <div className="text-muted mt-0.5 ml-[15px] flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
           {node.user && !(isTaggedDevicesUser(node.user) && node.tags?.length) ? (
-            <span>{getUserDisplayName(node.user)}</span>
+            <span>
+              {isTaggedDevicesUser(node.user)
+                ? t("machines.tagOwned")
+                : getUserDisplayName(node.user)}
+            </span>
           ) : undefined}
           {node.tags?.map((tag) => (
             <span className="font-mono" key={tag}>
@@ -106,7 +112,9 @@ export default function MachineRow({
                 key={value}
                 onClick={async () => {
                   const isCopied = await copyToClipboard(value);
-                  toast(isCopied ? `Copied ${value}` : "Copy failed. Copy the address manually.");
+                  toast(
+                    isCopied ? t("machines.copy.success", { value }) : t("machines.copy.failed"),
+                  );
                 }}
               >
                 <div className="flex w-full items-center justify-between gap-x-6">
@@ -127,12 +135,16 @@ export default function MachineRow({
           {node.hostInfo !== undefined ? (
             <>
               <p className="flex items-center gap-x-1 font-mono">
-                {hinfo.getTSVersion(node.hostInfo)}
+                {node.hostInfo.IPNVersion
+                  ? hinfo.getTSVersion(node.hostInfo)
+                  : t("machines.unknown")}
                 {latestVersion && hinfo.isUpdateAvailable(node.hostInfo, latestVersion) ? (
-                  <Tooltip content={`Tailscale ${latestVersion} is available.`}>
+                  <Tooltip
+                    content={t("machines.update.availableVersion", { version: latestVersion })}
+                  >
                     <span className="bg-warn-subtle text-warn inline-flex size-4 items-center justify-center rounded-full">
                       <ArrowUp
-                        aria-label="Update available"
+                        aria-label={t("machines.update.available")}
                         className="size-3"
                         strokeWidth={2.75}
                       />
@@ -140,23 +152,28 @@ export default function MachineRow({
                   </Tooltip>
                 ) : undefined}
               </p>
-              <p className="text-muted max-w-48 truncate">{hinfo.getOSInfo(node.hostInfo)}</p>
+              <p className="text-muted max-w-48 truncate">
+                {hinfo.getOSInfo({
+                  ...node.hostInfo,
+                  OS: node.hostInfo.OS ?? t("machines.unknown"),
+                })}
+              </p>
             </>
           ) : (
-            <p className="text-muted">Unknown</p>
+            <p className="text-muted">{t("machines.unknown")}</p>
           )}
         </TableCell>
       ) : undefined}
       <TableCell className="whitespace-nowrap">
         {isConnected ? (
-          <span className="text-ok">Connected</span>
+          <span className="text-ok">{t("machines.connected")}</span>
         ) : (
           <span
             className="text-muted"
             suppressHydrationWarning
-            title={new Date(node.lastSeen).toLocaleString()}
+            title={new Date(node.lastSeen).toLocaleString(locale)}
           >
-            {formatTimeDelta(new Date(node.lastSeen))}
+            {formatTimeDelta(new Date(node.lastSeen), locale)}
           </span>
         )}
       </TableCell>

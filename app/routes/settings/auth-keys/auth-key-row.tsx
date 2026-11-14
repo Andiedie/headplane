@@ -1,5 +1,6 @@
 import Chip from "~/components/chip";
 import { TableCell } from "~/components/table";
+import { useI18n } from "~/i18n/react";
 import type { PreAuthKey, User } from "~/types";
 import { formatTimeDelta, formatTimeUntil } from "~/utils/time";
 import { getUserDisplayName } from "~/utils/user";
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export default function AuthKeyRow({ authKey, user }: Props) {
+  const { t, locale } = useI18n();
   const createdAt = new Date(authKey.createdAt);
   const expiration = new Date(authKey.expiration);
   const isPastExpiry = expiration < new Date();
@@ -27,26 +29,40 @@ export default function AuthKeyRow({ authKey, user }: Props) {
               {tag}
             </span>
           ))}
-          <Chip text={authKey.reusable ? "Reusable" : isSpent ? "Used" : "Single use"} />
-          {authKey.ephemeral && <Chip text="Ephemeral" />}
+          <Chip
+            text={t(
+              authKey.reusable
+                ? "settings.reusable"
+                : isSpent
+                  ? "settings.keys.used"
+                  : "settings.keys.singleUse",
+            )}
+          />
+          {authKey.ephemeral && <Chip text={t("settings.ephemeral")} />}
         </div>
       </TableCell>
       <TableCell>
-        {user ? getUserDisplayName(user) : <span className="text-muted">Tags only</span>}
+        {user ? (
+          getUserDisplayName(user)
+        ) : (
+          <span className="text-muted">{t("settings.tagsOnly")}</span>
+        )}
       </TableCell>
       <TableCell
         className={isPastExpiry ? "text-muted whitespace-nowrap" : "whitespace-nowrap"}
         suppressHydrationWarning
-        title={expiration.toLocaleString()}
+        title={expiration.toLocaleString(locale)}
       >
-        {isPastExpiry ? `Expired ${formatTimeDelta(expiration)}` : formatTimeUntil(expiration)}
+        {isPastExpiry
+          ? t("settings.keys.expiredAgo", { time: formatTimeDelta(expiration, locale) })
+          : formatTimeUntil(expiration, locale)}
       </TableCell>
       <TableCell
         className="text-muted whitespace-nowrap"
         suppressHydrationWarning
-        title={createdAt.toLocaleString()}
+        title={createdAt.toLocaleString(locale)}
       >
-        {formatTimeDelta(createdAt)}
+        {formatTimeDelta(createdAt, locale)}
       </TableCell>
       <TableCell className="py-1.5 text-right align-middle">
         {!isPastExpiry && !isSpent && user && <ExpireAuthKey authKey={authKey} user={user} />}

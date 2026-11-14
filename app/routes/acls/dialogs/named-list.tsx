@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import Input from "~/components/input";
 import TokenList from "~/components/token-list";
+import { useI18n } from "~/i18n/react";
 import { isValidGroupName, isValidTagName } from "~/utils/acl-policy";
 
 import EditorDialog from "./editor-dialog";
@@ -22,24 +23,32 @@ interface NamedListDialogProps {
 
 const COPY = {
   group: {
-    title: "group",
+    title: "policy.group.new",
+    edit: "policy.group.edit",
+    add: "policy.group.add",
+    update: "policy.group.update",
+    duplicate: "policy.group.duplicate",
     prefix: "group:",
-    field: "Members",
-    fieldDescription: "Headscale users that belong to this group.",
-    empty: "No members yet",
+    field: "policy.group.members",
+    fieldDescription: "policy.group.membersDescription",
+    empty: "policy.group.empty",
     placeholder: "alice@",
     validate: isValidGroupName,
-    hint: "Group names must start with group: and may only contain lowercase letters, numbers and dashes.",
+    hint: "policy.group.hint",
   },
   tag: {
-    title: "tag",
+    title: "policy.tag.new",
+    edit: "policy.tag.edit",
+    add: "policy.tag.add",
+    update: "policy.tag.update",
+    duplicate: "policy.tag.duplicate",
     prefix: "tag:",
-    field: "Tag owners",
-    fieldDescription: "Users and groups allowed to assign this tag to a node.",
-    empty: "No owners yet",
+    field: "policy.tag.owners",
+    fieldDescription: "policy.tag.ownersDescription",
+    empty: "policy.tag.empty",
     placeholder: "group:ops",
     validate: isValidTagName,
-    hint: "Tag names must start with tag: and may only contain lowercase letters, numbers and dashes.",
+    hint: "policy.tag.hint",
   },
 } as const;
 
@@ -53,6 +62,7 @@ export default function NamedListDialog({
   suggestions,
   onSave,
 }: NamedListDialogProps) {
+  const { t } = useI18n();
   const copy = COPY[kind];
   const [draftName, setDraftName] = useState(name ?? copy.prefix);
   const [draftMembers, setDraftMembers] = useState<string[]>(() => [...(members ?? [])]);
@@ -67,26 +77,26 @@ export default function NamedListDialog({
 
   return (
     <EditorDialog
-      description={copy.hint}
+      description={t(copy.hint)}
       isDisabled={nameIsInvalid}
       isOpen={isOpen}
       onSubmit={() => onSave(trimmedName, draftMembers)}
       setIsOpen={setIsOpen}
-      submitLabel={name ? `Update ${copy.title}` : `Add ${copy.title}`}
-      title={name ? `Edit ${copy.title} ${name}` : `New ${copy.title}`}
+      submitLabel={t(name ? copy.update : copy.add)}
+      title={name ? t(copy.edit, { name }) : t(copy.title)}
     >
       <Input
-        errorMessage={isDuplicate ? `A ${copy.title} with this name already exists.` : copy.hint}
+        errorMessage={t(isDuplicate ? copy.duplicate : copy.hint)}
         invalid={showNameError}
-        label="Name"
+        label={t("policy.name")}
         onChange={setDraftName}
         placeholder={`${copy.prefix}example`}
         value={draftName}
       />
       <TokenList
-        description={copy.fieldDescription}
-        emptyText={copy.empty}
-        label={copy.field}
+        description={t(copy.fieldDescription)}
+        emptyText={t(copy.empty)}
+        label={t(copy.field)}
         onChange={setDraftMembers}
         placeholder={copy.placeholder}
         suggestions={suggestions}

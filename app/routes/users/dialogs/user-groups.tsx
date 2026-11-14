@@ -5,6 +5,7 @@ import Callout from "~/components/callout";
 import Code from "~/components/code";
 import Link from "~/components/link";
 import TokenList from "~/components/token-list";
+import { Trans, useI18n } from "~/i18n/react";
 import { isValidGroupName } from "~/utils/acl-policy";
 
 interface UserGroupsProps {
@@ -28,6 +29,7 @@ export default function UserGroups({
   availableGroups,
   policyHasComments,
 }: UserGroupsProps) {
+  const { t } = useI18n();
   const [selected, setSelected] = useState([...groups]);
   const isUnchanged =
     selected.length === groups.length && selected.every((group) => groups.includes(group));
@@ -35,27 +37,32 @@ export default function UserGroups({
   return (
     <ActionDialog
       description={
-        <>
-          Groups live in the ACL policy, so saving rewrites its <Code>groups</Code> section.{" "}
-          <Link external styled to="https://tailscale.com/kb/1018/acls">
-            Docs
-          </Link>
-        </>
+        <Trans
+          id="users.groups.description"
+          values={{
+            groups: <Code>groups</Code>,
+            docs: (
+              <Link external styled to="https://tailscale.com/kb/1018/acls">
+                {t("users.docs")}
+              </Link>
+            ),
+          }}
+        />
       }
       fields={{ user_name: userName }}
       intent="update_groups"
       isDisabled={isUnchanged}
       onOpenChange={setIsOpen}
       open={isOpen}
-      submitLabel="Save groups"
-      title={`Groups for ${displayName}`}
+      submitLabel={t("users.groups.save")}
+      title={t("users.groups.title", { name: displayName })}
     >
       {selected.map((group) => (
         <input key={group} name="groups" type="hidden" value={group} />
       ))}
       <TokenList
-        emptyText="This user isn't in any group"
-        label="Groups"
+        emptyText={t("users.groups.empty")}
+        label={t("users.groups")}
         onChange={setSelected}
         placeholder="group:example"
         suggestions={availableGroups}
@@ -63,9 +70,7 @@ export default function UserGroups({
         values={selected}
       />
       {policyHasComments && (
-        <Callout variant="warning">
-          Your policy has comments. Saving here rewrites the policy and drops them.
-        </Callout>
+        <Callout variant="warning">{t("users.groups.commentsWarning")}</Callout>
       )}
     </ActionDialog>
   );

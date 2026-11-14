@@ -6,6 +6,7 @@ import { Dialog, DialogActions, DialogClose, DialogTitle } from "~/components/di
 import Link from "~/components/link";
 import { Row, RowList } from "~/components/section";
 import Switch from "~/components/switch";
+import { Trans, useI18n } from "~/i18n/react";
 import type { ActionResult } from "~/utils/form";
 import type { PopulatedNode } from "~/utils/node-info";
 
@@ -16,6 +17,7 @@ interface RoutesProps {
 }
 
 export default function Routes({ node, isOpen, setIsOpen }: RoutesProps) {
+  const { t } = useI18n();
   const fetcher = useFetcher<ActionResult>();
   const subnets = [
     ...node.customRouting.subnetApprovedRoutes,
@@ -36,19 +38,23 @@ export default function Routes({ node, isOpen, setIsOpen }: RoutesProps) {
 
   return (
     <Dialog onOpenChange={setIsOpen} open={isOpen}>
-      <DialogTitle>Routes for {node.givenName}</DialogTitle>
+      <DialogTitle>{t("machines.routes.title", { name: node.givenName })}</DialogTitle>
       <section className="flex flex-col gap-2">
-        <h3 className="font-medium">Subnet routes</h3>
+        <h3 className="font-medium">{t("machines.routes.subnets")}</h3>
         <p className="text-muted">
-          Reach devices that can&apos;t run Tailscale through IP ranges this machine advertises.{" "}
-          <Link external styled to="https://tailscale.com/kb/1019/subnets">
-            Docs
-          </Link>
+          <Trans
+            id="machines.routes.subnetDescription"
+            values={{
+              docs: (
+                <Link external styled to="https://tailscale.com/kb/1019/subnets">
+                  {t("machines.docs")}
+                </Link>
+              ),
+            }}
+          />
         </p>
         {subnets.length === 0 ? (
-          <p className="text-muted py-2.5 text-sm">
-            This machine doesn&apos;t advertise any routes
-          </p>
+          <p className="text-muted py-2.5 text-sm">{t("machines.routes.noSubnets")}</p>
         ) : (
           <RowList>
             {subnets.map((route) => (
@@ -56,7 +62,7 @@ export default function Routes({ node, isOpen, setIsOpen }: RoutesProps) {
                 action={
                   <Switch
                     defaultChecked={node.approvedRoutes.includes(route)}
-                    label={`Approve ${route}`}
+                    label={t("machines.routes.approve", { route })}
                     onCheckedChange={(checked) => submit([route], checked)}
                   />
                 }
@@ -69,38 +75,44 @@ export default function Routes({ node, isOpen, setIsOpen }: RoutesProps) {
         )}
       </section>
       <section className="flex flex-col gap-2">
-        <h3 className="font-medium">Exit node</h3>
+        <h3 className="font-medium">{t("machines.routes.exitNode")}</h3>
         <p className="text-muted">
-          Let devices send their internet traffic through this machine.{" "}
-          <Link external styled to="https://tailscale.com/kb/1103/exit-nodes">
-            Docs
-          </Link>
+          <Trans
+            id="machines.routes.exitDescription"
+            values={{
+              docs: (
+                <Link external styled to="https://tailscale.com/kb/1103/exit-nodes">
+                  {t("machines.docs")}
+                </Link>
+              ),
+            }}
+          />
         </p>
         {node.customRouting.exitRoutes.length === 0 ? (
-          <p className="text-muted py-2.5 text-sm">
-            This machine isn&apos;t advertised as an exit node
-          </p>
+          <p className="text-muted py-2.5 text-sm">{t("machines.routes.noExitNode")}</p>
         ) : (
           <RowList>
             <Row
               action={
                 <Switch
                   defaultChecked={node.customRouting.exitApproved}
-                  label="Use as exit node"
+                  label={t("machines.routes.useExitNode")}
                   onCheckedChange={(checked) => submit(node.customRouting.exitRoutes, checked)}
                 />
               }
             >
-              Use as exit node
+              {t("machines.routes.useExitNode")}
             </Row>
           </RowList>
         )}
       </section>
       {fetcher.data?.ok === false && (
-        <Callout variant="error">{fetcher.data.errors.form ?? "Couldn't update routes."}</Callout>
+        <Callout variant="error">
+          {fetcher.data.errors.form ?? t("machines.routes.updateFailed")}
+        </Callout>
       )}
       <DialogActions>
-        <DialogClose render={<Button>Done</Button>} />
+        <DialogClose render={<Button>{t("machines.done")}</Button>} />
       </DialogActions>
     </Dialog>
   );

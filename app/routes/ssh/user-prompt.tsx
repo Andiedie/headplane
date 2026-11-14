@@ -3,6 +3,7 @@ import { Form } from "react-router";
 import Button from "~/components/button";
 import Input from "~/components/input";
 import Link from "~/components/link";
+import { Trans, useI18n } from "~/i18n/react";
 import Shell from "~/routes/auth/login/shell";
 
 import { SSH_DOCS_URL } from "./errors";
@@ -12,11 +13,9 @@ interface UserPromptProps {
 }
 
 export default function UserPrompt({ hostname }: UserPromptProps) {
+  const { t } = useI18n();
   return (
-    <Shell
-      description="Pick the user to sign in as. Your policy's SSH rules decide which ones are allowed."
-      title={`Connect to ${hostname}`}
-    >
+    <Shell description={t("ssh.prompt.description")} title={t("ssh.prompt.title", { hostname })}>
       <Form
         className="flex flex-col gap-3"
         method="GET"
@@ -36,17 +35,28 @@ export default function UserPrompt({ hostname }: UserPromptProps) {
           window.location.assign(url.toString());
         }}
       >
-        <Input autoComplete="off" label="Username" name="user" required spellCheck={false} />
+        <Input
+          autoComplete="off"
+          label={t("ssh.prompt.username")}
+          name="user"
+          required
+          spellCheck={false}
+        />
         <Button className="w-full" type="submit" variant="primary">
-          Connect
+          {t("ssh.prompt.connect")}
         </Button>
       </Form>
       <p className="text-muted mt-6 text-sm">
-        Can't connect? See{" "}
-        <Link external styled to={`${SSH_DOCS_URL}#troubleshooting`}>
-          troubleshooting
-        </Link>
-        .
+        <Trans
+          id="ssh.prompt.help"
+          values={{
+            link: (
+              <Link external styled to={`${SSH_DOCS_URL}#troubleshooting`}>
+                {t("ssh.prompt.troubleshooting")}
+              </Link>
+            ),
+          }}
+        />
       </p>
     </Shell>
   );

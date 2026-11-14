@@ -1,5 +1,6 @@
 import * as v from "valibot";
 
+import { translate } from "~/i18n";
 import { authContext, headscaleContext, requestApiContext } from "~/server/context";
 import { isDataWithApiError } from "~/server/headscale/api/error-client";
 import { ActionError, createAction } from "~/server/web/actions";
@@ -27,10 +28,10 @@ export const aclAction = createAction({
           v.check((value) => value.trim().length > 0, "The policy can't be empty."),
         ),
       },
-      async handler(input, { api, capabilities }) {
+      async handler(input, { api, capabilities }, locale) {
         const parsed = parsePolicy(input.policy);
         if (!parsed.ok) {
-          return invalid({ form: `Syntax error: ${parsed.error}` });
+          return invalid({ form: translate(locale, "errors.syntax", { detail: parsed.error }) });
         }
 
         // Older Headscale only says `unknown field "grants"`.
@@ -38,6 +39,8 @@ export const aclAction = createAction({
         if (hasGrants && !capabilities.policySupportsGrants) {
           throw new ActionError(
             "Grants need Headscale 0.29 or newer. Remove the `grants` section or upgrade Headscale.",
+            400,
+            { key: "errors.grantsVersion" },
           );
         }
 
@@ -52,6 +55,7 @@ export const aclAction = createAction({
             throw new ActionError(
               "The ACL policy is read-only. Set `policy.mode` to `database` in your Headscale configuration to edit it.",
               403,
+              { key: "errors.policyReadOnly" },
             );
           }
 
@@ -61,13 +65,13 @@ export const aclAction = createAction({
           );
           if (typeof message === "string" && prefix) {
             const detail = message.slice(message.indexOf(prefix) + prefix.length).trim();
-            return invalid({ form: `Syntax error: ${detail}` });
+            return invalid({ form: translate(locale, "errors.syntax", { detail }) });
           }
 
           throw error;
         }
 
-        return ok("Policy updated");
+        return ok(translate(locale, "actions.policyUpdated"));
       },
     },
   },

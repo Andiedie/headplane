@@ -1,6 +1,7 @@
 import Avatar from "~/components/avatar";
 import Chip from "~/components/chip";
 import { TableCell } from "~/components/table";
+import { useI18n } from "~/i18n/react";
 import type { Role } from "~/server/web/roles";
 import cn from "~/utils/cn";
 import { formatTimeDelta } from "~/utils/time";
@@ -11,7 +12,7 @@ import MenuOptions from "./menu";
 
 interface HeadplaneUserRowProps {
   user: HeadplaneUserData;
-  headscaleUsers: { id: string; name: string; claimed: boolean }[];
+  headscaleUsers: { id: string; name: string; isTaggedDevices: boolean; claimed: boolean }[];
   isSelf?: boolean;
   isOwner?: boolean;
   canEditGroups?: boolean;
@@ -28,6 +29,7 @@ export default function HeadplaneUserRow({
   policyGroups,
   policyHasComments,
 }: HeadplaneUserRowProps) {
+  const { locale, t } = useI18n();
   const displayName = user.linkedHeadscaleUser?.displayName || user.name || user.email || user.sub;
   const displayUsername =
     user.linkedHeadscaleUser?.displayName &&
@@ -51,21 +53,21 @@ export default function HeadplaneUserRow({
                   {group}
                 </span>
               ))}
-              {!user.headscaleUserId && <Chip text="Not linked" variant="warn" />}
+              {!user.headscaleUserId && <Chip text={t("users.notLinked")} variant="warn" />}
             </div>
           </div>
         </div>
       </TableCell>
       <TableCell className={cn(user.role === "member" && "text-muted")}>
-        {mapRoleToName(user.role)}
+        {mapRoleToName(user.role, t)}
       </TableCell>
       <TableCell className="text-muted whitespace-nowrap">
         {user.lastLoginAt ? (
-          <span suppressHydrationWarning title={new Date(user.lastLoginAt).toLocaleString()}>
-            {formatTimeDelta(new Date(user.lastLoginAt))}
+          <span suppressHydrationWarning title={new Date(user.lastLoginAt).toLocaleString(locale)}>
+            {formatTimeDelta(new Date(user.lastLoginAt), locale)}
           </span>
         ) : (
-          "Never"
+          t("users.lastLogin.never")
         )}
       </TableCell>
       <TableCell className="whitespace-nowrap">
@@ -87,23 +89,23 @@ export default function HeadplaneUserRow({
   );
 }
 
-function mapRoleToName(role: Role) {
+function mapRoleToName(role: Role, t: ReturnType<typeof useI18n>["t"]) {
   switch (role) {
     case "owner":
-      return "Owner";
+      return t("users.role.owner");
     case "admin":
-      return "Admin";
+      return t("users.role.admin");
     case "network_admin":
-      return "Network Admin";
+      return t("users.role.network_admin");
     case "it_admin":
-      return "IT Admin";
+      return t("users.role.it_admin");
     case "auditor":
-      return "Auditor";
+      return t("users.role.auditor");
     case "viewer":
-      return "Viewer";
+      return t("users.role.viewer");
     case "member":
-      return "Member";
+      return t("users.role.member");
     default:
-      return "Unknown";
+      return t("users.role.unknown");
   }
 }

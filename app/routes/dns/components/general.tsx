@@ -3,6 +3,7 @@ import { useFetcher } from "react-router";
 import Callout from "~/components/callout";
 import Section, { SettingList, SettingRow } from "~/components/section";
 import Switch from "~/components/switch";
+import { useI18n } from "~/i18n/react";
 import type { ActionResult } from "~/utils/form";
 
 import RenameTailnet from "./rename-tailnet";
@@ -15,16 +16,17 @@ interface Props {
 }
 
 export default function General({ baseDomain, isMagicDns, isOverrideDns, isDisabled }: Props) {
+  const { t } = useI18n();
   const magic = useToggle("toggle_magic", isMagicDns);
   const override = useToggle("override_dns", isOverrideDns);
   const error = magic.error ?? override.error;
 
   return (
-    <Section description="Your tailnet domain and how devices pick a DNS server." title="General">
+    <Section description={t("dns.general.description")} title={t("dns.general.title")}>
       <SettingList>
         <SettingRow
           action={<RenameTailnet isDisabled={isDisabled} name={baseDomain} />}
-          label="Tailnet name"
+          label={t("dns.tailnet.name")}
         >
           <span className="font-mono text-xs">{baseDomain}</span>
         </SettingRow>
@@ -33,16 +35,16 @@ export default function General({ baseDomain, isMagicDns, isOverrideDns, isDisab
             <Switch
               checked={magic.isEnabled}
               disabled={isDisabled}
-              label="Magic DNS"
+              label={t("dns.magicDns")}
               onCheckedChange={magic.submit}
             />
           }
-          label="Magic DNS"
+          label={t("dns.magicDns")}
         >
           {magic.isEnabled ? (
             <span className="font-mono text-xs">[device].{baseDomain}</span>
           ) : (
-            <span className="text-muted">Devices are only reachable by IP</span>
+            <span className="text-muted">{t("dns.general.ipOnly")}</span>
           )}
         </SettingRow>
         <SettingRow
@@ -50,16 +52,16 @@ export default function General({ baseDomain, isMagicDns, isOverrideDns, isDisab
             <Switch
               checked={override.isEnabled}
               disabled={isDisabled}
-              label="Override local DNS"
+              label={t("dns.overrideDns")}
               onCheckedChange={override.submit}
             />
           }
-          label="Override local DNS"
+          label={t("dns.overrideDns")}
         >
           <span className="text-muted">
             {override.isEnabled
-              ? "Devices send all queries to the nameservers below"
-              : "Devices keep their own DNS settings"}
+              ? t("dns.general.overrideEnabled")
+              : t("dns.general.overrideDisabled")}
           </span>
         </SettingRow>
       </SettingList>
@@ -75,6 +77,7 @@ export default function General({ baseDomain, isMagicDns, isOverrideDns, isDisab
 // Each switch gets its own fetcher so flipping both quickly doesn't cancel
 // the first submit.
 function useToggle(intent: string, isSaved: boolean) {
+  const { t } = useI18n();
   const fetcher = useFetcher<ActionResult>();
   const pending = fetcher.formData?.get("enabled");
 
@@ -82,7 +85,7 @@ function useToggle(intent: string, isSaved: boolean) {
     isEnabled: pending ? pending === "true" : isSaved,
     error:
       fetcher.data?.ok === false
-        ? (fetcher.data.errors.form ?? "Couldn't save the setting.")
+        ? (fetcher.data.errors.form ?? t("dns.errors.saveSetting"))
         : undefined,
     submit: (checked: boolean) => {
       fetcher.submit({ intent, enabled: String(checked) }, { method: "POST" });

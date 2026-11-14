@@ -1,3 +1,4 @@
+import { useI18n } from "~/i18n/react";
 import { formatTimeUntil } from "~/utils/time";
 
 import Chip from "../chip";
@@ -8,38 +9,39 @@ export interface ExpiryTagProps {
   expiry?: string;
 }
 
-const formatter = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-  year: "numeric",
-});
-
 export function ExpiryTag({ variant, expiry }: ExpiryTagProps) {
+  const { locale, t } = useI18n();
+  const formatter = new Intl.DateTimeFormat(locale, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
   const date = expiry ? formatter.format(new Date(expiry)) : undefined;
 
   switch (variant) {
     case "expired":
       return (
-        <Tooltip
-          content={`This machine's key expired on ${date}. Re-authenticate with Tailscale on the machine to reconnect it.`}
-        >
-          <Chip text="Expired" variant="bad" />
+        <Tooltip content={t("components.tags.expiredDescription", { date: String(date) })}>
+          <Chip text={t("components.status.expired")} variant="bad" />
         </Tooltip>
       );
 
     case "expiring":
       return (
-        <Tooltip
-          content={`This machine's key expires on ${date}. Re-authenticate with Tailscale on the machine before then to stay connected.`}
-        >
-          <Chip text={`Key expires ${formatTimeUntil(new Date(expiry!))}`} variant="warn" />
+        <Tooltip content={t("components.tags.expiringDescription", { date: String(date) })}>
+          <Chip
+            text={t("components.tags.expiring", {
+              time: formatTimeUntil(new Date(expiry!), locale),
+            })}
+            variant="warn"
+          />
         </Tooltip>
       );
 
     case "no-expiry":
       return (
-        <Tooltip content="This machine has key expiry disabled and never needs to re-authenticate.">
-          <Chip text="No expiry" />
+        <Tooltip content={t("components.tags.noExpiryDescription")}>
+          <Chip text={t("components.tags.noExpiry")} />
         </Tooltip>
       );
   }

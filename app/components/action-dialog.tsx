@@ -12,6 +12,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from "~/components/dialog";
+import { useI18n } from "~/i18n/react";
 import type { ActionResult } from "~/utils/form";
 
 export interface ActionDialogProps {
@@ -46,6 +47,7 @@ export default function ActionDialog({
   children,
   success,
 }: ActionDialogProps) {
+  const { t } = useI18n();
   const fetcher = useFetcher<ActionResult>();
   const [internalOpen, setInternalOpen] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
@@ -95,7 +97,7 @@ export default function ActionDialog({
         <>
           {success(result.data ?? {})}
           <DialogActions>
-            <DialogClose render={<Button>Done</Button>} />
+            <DialogClose render={<Button>{t("components.actions.done")}</Button>} />
           </DialogActions>
         </>
       ) : (
@@ -115,7 +117,10 @@ export default function ActionDialog({
             {children}
             {errors?.form && <Callout variant="error">{errors.form}</Callout>}
             <DialogActions>
-              <DialogClose disabled={isPending} render={<Button>Cancel</Button>} />
+              <DialogClose
+                disabled={isPending}
+                render={<Button>{t("components.actions.cancel")}</Button>}
+              />
               <Button
                 disabled={isDisabled}
                 pending={isPending}

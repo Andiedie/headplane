@@ -1,5 +1,6 @@
 import ActionDialog from "~/components/action-dialog";
 import Callout from "~/components/callout";
+import { useI18n } from "~/i18n/react";
 import type { Machine, User } from "~/types";
 
 interface DeleteProps {
@@ -10,14 +11,13 @@ interface DeleteProps {
 }
 
 export default function DeleteUser({ user, machines, isOpen, setIsOpen }: DeleteProps) {
+  const { t } = useI18n();
   const hasMachines = machines.length > 0;
 
   return (
     <ActionDialog
       description={
-        user.provider === "oidc"
-          ? "Deleted users can't be recovered. They sign in through your OIDC provider, so signing in again recreates them."
-          : "Deleted users can't be recovered."
+        user.provider === "oidc" ? t("users.delete.oidcDescription") : t("users.delete.description")
       }
       fields={{ headscale_user_id: user.id }}
       intent="delete"
@@ -25,14 +25,10 @@ export default function DeleteUser({ user, machines, isOpen, setIsOpen }: Delete
       isDisabled={hasMachines}
       onOpenChange={setIsOpen}
       open={isOpen}
-      submitLabel="Delete"
-      title={`Delete ${user.name || user.displayName}?`}
+      submitLabel={t("users.delete")}
+      title={t("users.delete.title", { name: user.name || user.displayName || user.id })}
     >
-      {hasMachines && (
-        <Callout variant="warning">
-          This user still owns machines. Remove them or change their owner first.
-        </Callout>
-      )}
+      {hasMachines && <Callout variant="warning">{t("users.delete.hasMachines")}</Callout>}
     </ActionDialog>
   );
 }

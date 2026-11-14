@@ -1,4 +1,5 @@
 import ActionDialog from "~/components/action-dialog";
+import { useI18n } from "~/i18n/react";
 import type { Machine } from "~/types";
 
 interface ExpireProps {
@@ -8,16 +9,17 @@ interface ExpireProps {
 }
 
 export default function Expire({ machine, isOpen, setIsOpen }: ExpireProps) {
+  const { t } = useI18n();
   return (
     <ActionDialog
-      description="The machine disconnects from your tailnet until someone signs in on it again."
+      description={t("machines.expire.description")}
       fields={{ node_id: machine.id }}
       intent="expire"
       isDestructive
       onOpenChange={setIsOpen}
       open={isOpen}
-      submitLabel="Expire"
-      title={`Expire ${machine.givenName}?`}
+      submitLabel={t("machines.expire")}
+      title={t("machines.expire.title", { name: machine.givenName })}
     />
   );
 }

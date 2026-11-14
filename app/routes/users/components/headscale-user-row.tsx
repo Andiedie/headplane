@@ -1,5 +1,6 @@
 import Avatar from "~/components/avatar";
 import { TableCell } from "~/components/table";
+import { useI18n } from "~/i18n/react";
 import { formatTimeDelta } from "~/utils/time";
 
 import type { UnlinkedHeadscaleUser } from "../overview";
@@ -21,6 +22,7 @@ export default function HeadscaleUserRow({
   policyGroups,
   policyHasComments,
 }: HeadscaleUserRowProps) {
+  const { locale } = useI18n();
   const displayName = user.displayName || user.name;
   const displayUsername =
     user.displayName && user.displayName !== user.name ? user.name : undefined;
@@ -45,8 +47,8 @@ export default function HeadscaleUserRow({
         </div>
       </TableCell>
       <TableCell className="text-muted whitespace-nowrap">
-        <span suppressHydrationWarning title={new Date(user.createdAt).toLocaleString()}>
-          {formatTimeDelta(new Date(user.createdAt))}
+        <span suppressHydrationWarning title={new Date(user.createdAt).toLocaleString(locale)}>
+          {formatTimeDelta(new Date(user.createdAt), locale)}
         </span>
       </TableCell>
       <TableCell className="whitespace-nowrap">

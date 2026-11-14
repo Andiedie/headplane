@@ -10,6 +10,7 @@
 
 ## Changes
 
+- The sign-in page and dashboard can switch between English and Simplified Chinese. The browser remembers the selected language; English remains the default and fallback, with no database migration or server configuration required.
 - The network-overview development branch publishes standard and shell-enabled AMD64/ARM64 images to GHCR after validation; channel tags and commit tags are available without deploying a running instance.
 - The Network page shows reported home relays, client-reported latency, and logical device relationships. Optional settings add single-region DERP map selection, native relay counters, and bounded observation history, without additional software on devices.
 - Headplane can be served under a path other than `/admin` by setting `server.base_path`, without building it from source (closes [#637](https://github.com/tale/headplane/issues/637)).

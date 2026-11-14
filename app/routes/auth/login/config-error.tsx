@@ -1,92 +1,47 @@
 import Callout from "~/components/callout";
 import Code from "~/components/code";
 import Link from "~/components/link";
+import { Trans, useI18n } from "~/i18n/react";
 import type { OidcErrorCode } from "~/server/oidc/provider";
 
 export function OidcDiscoveryFailedNotice() {
+  const { t } = useI18n();
   return (
-    <Callout className="mb-6" title="Single sign-on is unavailable" variant="warning">
-      Headplane can't reach your identity provider right now. You can still sign in with an API key.
+    <Callout className="mb-6" title={t("auth.oidc.unavailable")} variant="warning">
+      {t("auth.oidc.unreachable")}
     </Callout>
   );
 }
 
 export function OidcConfigErrorNotice({ errors }: { errors: OidcErrorCode[] }) {
+  const { t } = useI18n();
   return (
-    <Callout className="mb-6" title="Single sign-on is misconfigured" variant="error">
+    <Callout className="mb-6" title={t("auth.oidc.misconfigured")} variant="error">
       <ul className="list-inside list-disc">
-        {mapOidcErrorsToMessages(errors).map((code) => (
-          <li key={code.key}>{code.node}</li>
+        {errors.map((code) => (
+          <li key={code}>
+            <span>{getErrorMessage(code)}</span>
+          </li>
         ))}
       </ul>
       <Link external styled to="https://headplane.net/features/sso#troubleshooting">
-        Troubleshooting
+        {t("auth.oidc.troubleshooting")}
       </Link>
     </Callout>
   );
 }
 
-function mapOidcErrorsToMessages(errors: OidcErrorCode[]) {
-  const messages: {
-    key: string;
-    node: React.ReactNode;
-  }[] = [];
-
-  for (const error of errors) {
-    switch (error) {
-      case "invalid_api_key": {
-        messages.push({
-          key: error,
-          node: (
-            <span>
-              The provided API key for OIDC authentication is invalid. Ensure that{" "}
-              <Code>headscale.api_key</Code> is a valid API key.
-            </span>
-          ),
-        });
-        break;
-      }
-
-      case "missing_endpoints": {
-        messages.push({
-          key: error,
-          node: (
-            <span>
-              The OIDC provider is missing required endpoints. Ensure the discovery URL is correct
-              or provide manual endpoint overrides in your configuration.
-            </span>
-          ),
-        });
-        break;
-      }
-
-      case "discovery_failed": {
-        messages.push({
-          key: error,
-          node: (
-            <span>
-              Unable to reach the OIDC provider for discovery. SSO will retry on the next login
-              attempt.
-            </span>
-          ),
-        });
-        break;
-      }
-
-      default: {
-        messages.push({
-          key: error,
-          node: (
-            <span>
-              An unknown OIDC configuration error occurred. Please check the Headplane logs for more
-              information.
-            </span>
-          ),
-        });
-        break;
-      }
-    }
+function getErrorMessage(code: OidcErrorCode) {
+  switch (code) {
+    case "invalid_api_key":
+      return (
+        <Trans id="auth.oidc.invalidKey" values={{ config: <Code>headscale.api_key</Code> }} />
+      );
+    case "missing_endpoints":
+      return <Trans id="auth.oidc.missingEndpoints" />;
+    case "discovery_failed":
+      return <Trans id="auth.oidc.discoveryFailed" />;
+    default:
+      return <Trans id="auth.oidc.unknownConfig" />;
   }
-
-  return messages;
 }

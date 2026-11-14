@@ -1,3 +1,4 @@
+import { useI18n } from "~/i18n/react";
 import cn from "~/utils/cn";
 
 export interface StatusCircleProps {
@@ -7,7 +8,14 @@ export interface StatusCircleProps {
 }
 
 export default function StatusCircle({ isOnline, isExpired, className }: StatusCircleProps) {
-  const label = isExpired ? "Expired" : isOnline ? "Online" : "Offline";
+  const { t } = useI18n();
+  const label = t(
+    isExpired
+      ? "components.status.expired"
+      : isOnline
+        ? "components.status.online"
+        : "components.status.offline",
+  );
 
   return (
     <span

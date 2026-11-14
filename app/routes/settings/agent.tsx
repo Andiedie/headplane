@@ -7,6 +7,8 @@ import PageError from "~/components/page-error";
 import PageHeader from "~/components/page-header";
 import Section, { Row, RowList, SettingList, SettingRow } from "~/components/section";
 import StatusCircle from "~/components/status-circle";
+import { settingsErrorKeys } from "~/i18n/messages/settings";
+import { Trans, useI18n } from "~/i18n/react";
 import {
   agentsContext,
   authContext,
@@ -110,27 +112,40 @@ export async function action({ request, context }: Route.ActionArgs) {
 }
 
 export default function Page({ loaderData }: Route.ComponentProps) {
+  const { t, locale } = useI18n();
   const fetcher = useFetcher<typeof action>();
   const description = (
-    <>
-      Syncs each machine's Tailscale version, OS, and connectivity from your tailnet.{" "}
-      <Link external styled to="https://headplane.net/features/agent">
-        Docs
-      </Link>
-    </>
+    <Trans
+      id="settings.agent.description"
+      values={{
+        docs: (
+          <Link external styled to="https://headplane.net/features/agent">
+            {t("settings.docs")}
+          </Link>
+        ),
+      }}
+    />
   );
 
   if (!loaderData.enabled) {
     return (
       <>
-        <PageHeader description={description} isSubpage title="Agent" />
-        <Callout title="The agent is off">{loaderData.reason}.</Callout>
+        <PageHeader description={description} isSubpage title={t("settings.agent")} />
+        <Callout title={t("settings.agent.off")}>
+          {t("settings.agent.offReason", {
+            reason: settingsErrorKeys[loaderData.reason]
+              ? t(settingsErrorKeys[loaderData.reason])
+              : loaderData.reason,
+          })}
+        </Callout>
       </>
     );
   }
 
   const { self, missing, machineCount, isHeadscaleDown, hasMachines } = loaderData;
-  const unavailable = <p className="text-muted py-2.5 text-sm">Unavailable</p>;
+  const unavailable = (
+    <p className="text-muted py-2.5 text-sm">{t("settings.agent.unavailable")}</p>
+  );
   const isPending = !loaderData.syncedAt && Boolean(loaderData.authUrl);
   const hasError = Boolean(loaderData.error);
   const intervalMinutes = Math.max(1, Math.round(loaderData.intervalMs / 60_000));
@@ -141,77 +156,93 @@ export default function Page({ loaderData }: Route.ComponentProps) {
         actions={
           <fetcher.Form method="post">
             <Button pending={fetcher.state !== "idle"} type="submit">
-              Sync now
+              {t("settings.agent.syncNow")}
             </Button>
           </fetcher.Form>
         }
         description={description}
         isSubpage
-        title="Agent"
+        title={t("settings.agent")}
       />
       {isPending && loaderData.authUrl && (
-        <Callout className="mb-6" title="Waiting for approval" variant="warning">
-          Headplane tries to approve the agent's tailnet registration automatically. If that doesn't
-          work,{" "}
-          <Link external styled to={loaderData.authUrl}>
-            approve it here
-          </Link>
-          .
+        <Callout className="mb-6" title={t("settings.agent.pending")} variant="warning">
+          <Trans
+            id="settings.agent.approval"
+            values={{
+              link: (
+                <Link external styled to={loaderData.authUrl}>
+                  {t("settings.agent.approveHere")}
+                </Link>
+              ),
+            }}
+          />
         </Callout>
       )}
       {loaderData.error && !isHeadscaleDown && (
-        <Callout className="mb-6" title="Sync failed" variant="error">
+        <Callout className="mb-6" title={t("settings.agent.syncFailed")} variant="error">
           {loaderData.error}
         </Callout>
       )}
-      <Section title="Sync">
+      <Section title={t("settings.agent.sync")}>
         <SettingList>
-          <SettingRow label="Status">
+          <SettingRow label={t("settings.status")}>
             <span className="flex items-center gap-2">
               <StatusCircle isExpired={hasError} isOnline={!hasError && !isPending} />
               {hasError
-                ? `Failing, ${loaderData.consecutiveErrors} ${loaderData.consecutiveErrors === 1 ? "time" : "times"} in a row`
-                : isPending
-                  ? "Waiting for approval"
-                  : "Healthy"}
+                ? t(
+                    loaderData.consecutiveErrors === 1
+                      ? "settings.agent.failingOne"
+                      : "settings.agent.failingOther",
+                    { count: loaderData.consecutiveErrors.toLocaleString(locale) },
+                  )
+                : t(isPending ? "settings.agent.pending" : "settings.agent.healthy")}
             </span>
           </SettingRow>
-          <SettingRow label="Last synced">
+          <SettingRow label={t("settings.agent.lastSynced")}>
             {loaderData.syncedAt ? (
-              <span suppressHydrationWarning title={new Date(loaderData.syncedAt).toLocaleString()}>
-                {formatTimeDelta(new Date(loaderData.syncedAt))}
+              <span
+                suppressHydrationWarning
+                title={new Date(loaderData.syncedAt).toLocaleString(locale)}
+              >
+                {formatTimeDelta(new Date(loaderData.syncedAt), locale)}
               </span>
             ) : (
-              <span className="text-muted">Never</span>
+              <span className="text-muted">{t("settings.agent.never")}</span>
             )}
             <span className="text-muted">
-              {" "}
-              · every {intervalMinutes} {intervalMinutes === 1 ? "minute" : "minutes"}
+              {t(
+                intervalMinutes === 1
+                  ? "settings.agent.everyMinute"
+                  : "settings.agent.everyMinutes",
+                { count: intervalMinutes.toLocaleString(locale) },
+              )}
             </span>
           </SettingRow>
-          <SettingRow label="Process">
+          <SettingRow label={t("settings.agent.process")}>
             {loaderData.startedAt ? (
               <span
                 suppressHydrationWarning
-                title={new Date(loaderData.startedAt).toLocaleString()}
+                title={new Date(loaderData.startedAt).toLocaleString(locale)}
               >
-                Started {formatTimeDelta(new Date(loaderData.startedAt))}
+                {t("settings.agent.started", {
+                  time: formatTimeDelta(new Date(loaderData.startedAt), locale),
+                })}
               </span>
             ) : (
-              <span className="text-muted">Not running</span>
+              <span className="text-muted">{t("settings.agent.notRunning")}</span>
             )}
           </SettingRow>
         </SettingList>
       </Section>
       <Section
-        description="The node the agent uses to reach the rest of your tailnet."
-        title="Agent machine"
+        description={t("settings.agent.machineDescription")}
+        title={t("settings.agent.machineTitle")}
       >
         {!hasMachines ? (
           unavailable
         ) : self ? (
           <SettingList>
-            <SettingRow label="Machine">
+            <SettingRow label={t("settings.agent.machine")}>
               <span className="flex items-center gap-2">
                 <StatusCircle isOnline={self.isOnline} />
                 <Link styled to={`/machines/${self.id}`}>
@@ -219,27 +250,33 @@ export default function Page({ loaderData }: Route.ComponentProps) {
                 </Link>
               </span>
             </SettingRow>
-            <SettingRow label="Address">
-              <span className="font-mono text-xs">{self.addresses[0] ?? "None"}</span>
+            <SettingRow label={t("settings.agent.address")}>
+              <span className="font-mono text-xs">
+                {self.addresses[0] ?? t("settings.agent.none")}
+              </span>
             </SettingRow>
-            <SettingRow label="Tailscale version">
-              <span className="font-mono text-xs">{self.version ?? "Unknown"}</span>
+            <SettingRow label={t("settings.agent.version")}>
+              <span className="font-mono text-xs">
+                {self.version ?? t("settings.agent.unknown")}
+              </span>
             </SettingRow>
           </SettingList>
         ) : (
-          <p className="text-muted py-2.5 text-sm">The agent hasn't joined the tailnet yet.</p>
+          <p className="text-muted py-2.5 text-sm">{t("settings.agent.notJoined")}</p>
         )}
       </Section>
       <Section
-        description="Machines missing from the last sync keep the details from the last time they were seen, usually because they're offline."
-        title="Coverage"
+        description={t("settings.agent.coverageDescription")}
+        title={t("settings.agent.coverage")}
       >
         {!hasMachines ? (
           unavailable
         ) : (
           <p className="py-2.5 text-sm">
-            {machineCount - missing.length} of {machineCount}{" "}
-            {machineCount === 1 ? "machine" : "machines"} in the last sync
+            {t(machineCount === 1 ? "settings.agent.coverageOne" : "settings.agent.coverageOther", {
+              synced: (machineCount - missing.length).toLocaleString(locale),
+              count: machineCount.toLocaleString(locale),
+            })}
           </p>
         )}
         {missing.length > 0 && (
@@ -249,8 +286,10 @@ export default function Page({ loaderData }: Route.ComponentProps) {
                 action={
                   <span className="text-muted text-sm whitespace-nowrap" suppressHydrationWarning>
                     {node.updatedAt
-                      ? `Details from ${formatTimeDelta(new Date(node.updatedAt))}`
-                      : "No details yet"}
+                      ? t("settings.agent.detailsFrom", {
+                          time: formatTimeDelta(new Date(node.updatedAt), locale),
+                        })
+                      : t("settings.agent.noDetails")}
                   </span>
                 }
                 key={node.id}
@@ -271,5 +310,6 @@ export default function Page({ loaderData }: Route.ComponentProps) {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  return <PageError error={error} page="the agent" />;
+  const { t } = useI18n();
+  return <PageError error={error} page={t("settings.agent.errorPage")} />;
 }

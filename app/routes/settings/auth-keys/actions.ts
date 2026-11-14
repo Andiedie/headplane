@@ -1,5 +1,6 @@
 import * as v from "valibot";
 
+import { translate } from "~/i18n";
 import { authContext, requestApiContext } from "~/server/context";
 import { ActionError, createAction } from "~/server/web/actions";
 import { ownsHeadscaleUser } from "~/server/web/headscale-identity";
@@ -32,7 +33,9 @@ export const authKeysAction = createAction({
     const canGenerateAny = auth.can(principal, Capabilities.generate_authkeys);
     const canGenerateOwn = auth.can(principal, Capabilities.generate_own_authkeys);
     if (!canGenerateAny && !canGenerateOwn) {
-      throw new ActionError("You don't have permission to manage auth keys.", 403);
+      throw new ActionError("You don't have permission to manage auth keys.", 403, {
+        key: "errors.authKeysPermissionDenied",
+      });
     }
 
     async function requireOwnUser(userId: string) {
@@ -42,7 +45,9 @@ export const authKeysAction = createAction({
 
       const [user] = await api.users.list({ id: userId });
       if (!user || !ownsHeadscaleUser(principal, user)) {
-        throw new ActionError("You can only manage your own auth keys.", 403);
+        throw new ActionError("You can only manage your own auth keys.", 403, {
+          key: "errors.ownAuthKeysOnly",
+        });
       }
     }
 
@@ -61,11 +66,15 @@ export const authKeysAction = createAction({
         const tags = input.tags.map((tag) => tag.trim()).filter((tag) => tag !== "");
         const user = input.user_id || null;
         if (!user && tags.length === 0) {
-          throw new ActionError("Choose a user or add at least one tag.");
+          throw new ActionError("Choose a user or add at least one tag.", 400, {
+            key: "errors.userOrTagRequired",
+          });
         }
 
         if (!user && !canGenerateAny) {
-          throw new ActionError("You can only manage your own auth keys.", 403);
+          throw new ActionError("You can only manage your own auth keys.", 403, {
+            key: "errors.ownAuthKeysOnly",
+          });
         }
 
         if (user) {
@@ -88,7 +97,7 @@ export const authKeysAction = createAction({
     },
     expire: {
       fields: { key_id: id, user_id: id },
-      async handler(input, { api, requireOwnUser }) {
+      async handler(input, { api, requireOwnUser }, locale) {
         await requireOwnUser(input.user_id);
 
         // From 0.28 expiring only names the key, so find it among the keys of
@@ -96,11 +105,13 @@ export const authKeysAction = createAction({
         const keys = await api.preAuthKeys.listForUser(input.user_id);
         const key = keys.find((key) => key.id === input.key_id);
         if (!key) {
-          throw new ActionError("This auth key no longer exists.", 404);
+          throw new ActionError("This auth key no longer exists.", 404, {
+            key: "errors.authKeyMissing",
+          });
         }
 
         await api.preAuthKeys.expire(key);
-        return ok("Auth key expired");
+        return ok(translate(locale, "actions.authKeyExpired"));
       },
     },
   },

@@ -4,6 +4,7 @@ import Input from "~/components/input";
 import Link from "~/components/link";
 import Select from "~/components/select";
 import TokenList from "~/components/token-list";
+import { Trans, useI18n } from "~/i18n/react";
 import { KNOWN_SSH_ACTIONS, type SshRule } from "~/utils/acl-policy";
 
 import EditorDialog from "./editor-dialog";
@@ -28,6 +29,7 @@ export default function SshRuleDialog({
   destinations,
   onSave,
 }: SshRuleDialogProps) {
+  const { t } = useI18n();
   const [draft, setDraft] = useState<SshRule>(() => structuredClone(rule ?? EMPTY));
 
   const isInvalid = draft.src.length === 0 || draft.dst.length === 0 || draft.users.length === 0;
@@ -35,56 +37,64 @@ export default function SshRuleDialog({
   return (
     <EditorDialog
       description={
-        <>
-          SSH rules control Tailscale SSH access between nodes. Read the{" "}
-          <Link external styled to="https://tailscale.com/kb/1193/tailscale-ssh">
-            Tailscale SSH documentation
-          </Link>{" "}
-          for details about check mode.
-        </>
+        <Trans
+          id="policy.ssh.dialogDescription"
+          values={{
+            docs: (
+              <Link external styled to="https://tailscale.com/kb/1193/tailscale-ssh">
+                {t("policy.ssh.docs")}
+              </Link>
+            ),
+          }}
+        />
       }
       isDisabled={isInvalid}
       isOpen={isOpen}
       onSubmit={() => onSave(draft)}
       setIsOpen={setIsOpen}
-      submitLabel={rule ? "Update rule" : "Add rule"}
-      title={rule ? "Edit SSH rule" : "New SSH rule"}
+      submitLabel={rule ? t("policy.rules.update") : t("policy.rules.add")}
+      title={rule ? t("policy.ssh.edit") : t("policy.ssh.new")}
     >
       <Select
         items={[
-          { value: "accept", label: "Accept — allow the session immediately" },
-          { value: "check", label: "Check — require periodic re-authentication" },
+          { value: "accept", label: t("policy.ssh.accept") },
+          { value: "check", label: t("policy.ssh.check") },
           // An action we do not know is listed as-is so it survives an edit.
           ...(KNOWN_SSH_ACTIONS.includes(draft.action)
             ? []
-            : [{ value: draft.action, label: `${draft.action} — not known to Headplane` }]),
+            : [
+                {
+                  value: draft.action,
+                  label: t("policy.ssh.unknownAction", { action: draft.action }),
+                },
+              ]),
         ]}
-        label="Action"
+        label={t("policy.ssh.action")}
         onValueChange={(value) => setDraft({ ...draft, action: value ?? draft.action })}
         value={draft.action}
       />
       <TokenList
-        description="Who is allowed to open the SSH session."
-        emptyText="No sources yet"
-        label="Sources"
+        description={t("policy.ssh.sourcesDescription")}
+        emptyText={t("policy.sources.empty")}
+        label={t("policy.sources.title")}
         onChange={(src) => setDraft({ ...draft, src })}
         placeholder="group:ops"
         suggestions={sources}
         values={draft.src}
       />
       <TokenList
-        description="The nodes that accept the SSH session."
-        emptyText="No destinations yet"
-        label="Destinations"
+        description={t("policy.ssh.destinationsDescription")}
+        emptyText={t("policy.destinations.empty")}
+        label={t("policy.destinations.title")}
         onChange={(dst) => setDraft({ ...draft, dst })}
         placeholder="tag:server"
         suggestions={destinations}
         values={draft.dst}
       />
       <TokenList
-        description="The local Unix users that may be logged into."
-        emptyText="No SSH users yet"
-        label="SSH users"
+        description={t("policy.ssh.usersDescription")}
+        emptyText={t("policy.ssh.usersEmpty")}
+        label={t("policy.ssh.users")}
         onChange={(users) => setDraft({ ...draft, users })}
         placeholder="autogroup:nonroot"
         suggestions={SSH_USERS}
@@ -92,8 +102,8 @@ export default function SshRuleDialog({
       />
       {draft.action === "check" ? (
         <Input
-          description="How long a check-mode session stays valid, for example 12h."
-          label="Check period"
+          description={t("policy.ssh.checkDescription")}
+          label={t("policy.ssh.checkPeriod")}
           onChange={(checkPeriod) =>
             setDraft({ ...draft, checkPeriod: checkPeriod.length > 0 ? checkPeriod : undefined })
           }

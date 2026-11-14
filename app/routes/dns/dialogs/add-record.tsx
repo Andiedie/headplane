@@ -5,6 +5,7 @@ import ActionDialog from "~/components/action-dialog";
 import Button from "~/components/button";
 import Input from "~/components/input";
 import Select from "~/components/select";
+import { useI18n } from "~/i18n/react";
 import { fieldValidator } from "~/utils/form";
 
 import { recordValue } from "../schemas";
@@ -15,18 +16,19 @@ const validators = {
 };
 
 export default function AddRecord() {
+  const { t } = useI18n();
   const [type, setType] = useState<keyof typeof validators>("A");
 
   return (
     <ActionDialog
-      description="Point a domain at an IP address for every device on the tailnet."
+      description={t("dns.records.addDescription")}
       intent="add_record"
-      submitLabel="Add record"
-      title="Add DNS record"
+      submitLabel={t("dns.records.add")}
+      title={t("dns.records.addTitle")}
       trigger={
         <Button>
           <Plus className="size-3.5" />
-          Add record
+          {t("dns.records.add")}
         </Button>
       }
     >
@@ -35,7 +37,7 @@ export default function AddRecord() {
           { value: "A", label: "A" },
           { value: "AAAA", label: "AAAA" },
         ]}
-        label="Type"
+        label={t("dns.records.type")}
         name="type"
         onValueChange={(value) => {
           if (value === "A" || value === "AAAA") setType(value);
@@ -43,14 +45,20 @@ export default function AddRecord() {
         required
         value={type}
       />
-      <Input label="Domain" name="name" placeholder="test.example.com" required />
+      <Input label={t("dns.domain")} name="name" placeholder="test.example.com" required />
       <Input
         key={type}
-        label="IP address"
+        label={t("dns.ipAddress")}
         name="value"
         placeholder={type === "AAAA" ? "2001:db8::ff00:42:8329" : "100.100.100.100"}
         required
-        validate={validators[type]}
+        validate={(value) =>
+          validators[type](value)
+            ? type === "AAAA"
+              ? t("dns.errors.ipv6")
+              : t("dns.errors.ipv4")
+            : null
+        }
       />
     </ActionDialog>
   );

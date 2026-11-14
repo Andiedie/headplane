@@ -2,6 +2,7 @@ import ActionDialog from "~/components/action-dialog";
 import Code from "~/components/code";
 import Link from "~/components/link";
 import Section, { RemoveButton, Row, RowList } from "~/components/section";
+import { Trans, useI18n } from "~/i18n/react";
 
 import AddRecord from "../dialogs/add-record";
 
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export default function ManageRecords({ records, hasRecordsFile, isDisabled, isReadOnly }: Props) {
+  const { t } = useI18n();
   const isLocked = isDisabled || isReadOnly;
 
   return (
@@ -20,43 +22,55 @@ export default function ManageRecords({ records, hasRecordsFile, isDisabled, isR
       action={isLocked ? undefined : <AddRecord />}
       description={
         <>
-          Point a name at an address for every device on the tailnet. Headscale supports A and AAAA
-          records.{" "}
-          <Link external styled to="https://headscale.net/stable/ref/dns">
-            Docs
-          </Link>
+          <Trans
+            id="dns.records.description"
+            values={{
+              docs: (
+                <Link external styled to="https://headscale.net/stable/ref/dns">
+                  {t("dns.docs")}
+                </Link>
+              ),
+            }}
+          />
           {!isDisabled && isReadOnly && hasRecordsFile && (
             <>
               {" "}
-              To edit records here, give Headplane write access to the file at{" "}
-              <Code>dns.extra_records_path</Code>.
+              <Trans
+                id="dns.records.fileReadOnly"
+                values={{ path: <Code>dns.extra_records_path</Code> }}
+              />
             </>
           )}
           {!isDisabled && isReadOnly && !hasRecordsFile && (
             <>
               {" "}
-              To edit records here, move them from <Code>dns.extra_records</Code> into a JSON file
-              set as <Code>dns.extra_records_path</Code>.
+              <Trans
+                id="dns.records.inlineReadOnly"
+                values={{
+                  records: <Code>dns.extra_records</Code>,
+                  path: <Code>dns.extra_records_path</Code>,
+                }}
+              />
             </>
           )}
         </>
       }
-      title="DNS records"
+      title={t("dns.records.title")}
     >
       {records.length === 0 ? (
-        <p className="text-muted py-2.5 text-sm">No DNS records</p>
+        <p className="text-muted py-2.5 text-sm">{t("dns.records.empty")}</p>
       ) : (
         <RowList>
           {records.map((record) => (
             <Row
               action={
                 <ActionDialog
-                  description="Devices stop resolving this name to the record's address."
+                  description={t("dns.records.removeDescription")}
                   fields={{ name: record.name, type: record.type }}
                   intent="remove_record"
                   isDestructive
-                  submitLabel="Remove"
-                  title={`Remove the ${record.type} record for ${record.name}?`}
+                  submitLabel={t("dns.remove")}
+                  title={t("dns.records.removeTitle", { type: record.type, name: record.name })}
                   trigger={<RemoveButton disabled={isLocked} />}
                 />
               }

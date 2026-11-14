@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import Input from "~/components/input";
+import { useI18n } from "~/i18n/react";
 import { isValidHostName } from "~/utils/acl-policy";
 
 import EditorDialog from "./editor-dialog";
@@ -22,6 +23,7 @@ export default function HostDialog({
   existingNames,
   onSave,
 }: HostDialogProps) {
+  const { t } = useI18n();
   const [draftName, setDraftName] = useState(name ?? "");
   const [draftValue, setDraftValue] = useState(value ?? "");
 
@@ -31,29 +33,25 @@ export default function HostDialog({
 
   return (
     <EditorDialog
-      description="Hosts give a name to an IP address or CIDR range so it can be referenced from rules."
+      description={t("policy.hosts.dialogDescription")}
       isDisabled={nameIsInvalid || valueIsInvalid}
       isOpen={isOpen}
       onSubmit={() => onSave(draftName, draftValue.trim())}
       setIsOpen={setIsOpen}
-      submitLabel={name ? "Update host" : "Add host"}
-      title={name ? `Edit host ${name}` : "New host"}
+      submitLabel={name ? t("policy.hosts.update") : t("policy.hosts.add")}
+      title={name ? t("policy.hosts.edit", { name }) : t("policy.hosts.new")}
     >
       <Input
-        errorMessage={
-          isDuplicate
-            ? "A host with this name already exists."
-            : "Host names may only contain lowercase letters, numbers and dashes."
-        }
+        errorMessage={isDuplicate ? t("policy.hosts.duplicate") : t("policy.hosts.invalidName")}
         invalid={draftName.length > 0 && nameIsInvalid}
-        label="Name"
+        label={t("policy.name")}
         onChange={setDraftName}
         placeholder="office"
         value={draftName}
       />
       <Input
         invalid={draftValue.length > 0 && valueIsInvalid}
-        label="Address"
+        label={t("policy.hosts.address")}
         onChange={setDraftValue}
         placeholder="100.64.0.0/24"
         value={draftValue}

@@ -1,9 +1,10 @@
-import { data } from "react-router";
+import { data, isRouteErrorResponse } from "react-router";
 
 import Callout from "~/components/callout";
 import Link from "~/components/link";
 import PageError from "~/components/page-error";
 import PageHeader from "~/components/page-header";
+import { Trans, useI18n } from "~/i18n/react";
 import { authContext, headscaleConfigContext, integrationContext } from "~/server/context";
 import { Capabilities } from "~/server/web/roles";
 import { toastClientAction } from "~/utils/toast";
@@ -43,6 +44,7 @@ export const clientAction = toastClientAction;
 export default function Page({
   loaderData: { access, writable, isAutoApplied, settings },
 }: Route.ComponentProps) {
+  const { t } = useI18n();
   const isDisabled = !writable || !access;
 
   return (
@@ -50,30 +52,40 @@ export default function Page({
       <PageHeader
         isSubpage
         description={
-          <>
-            Limit who can sign in through OIDC. Headscale and Headplane both enforce these.{" "}
-            <Link external styled to="https://headscale.net/stable/ref/oidc/#basic-configuration">
-              Docs
-            </Link>
-          </>
+          <Trans
+            id="settings.restrictions.description"
+            values={{
+              docs: (
+                <Link
+                  external
+                  styled
+                  to="https://headscale.net/stable/ref/oidc/#basic-configuration"
+                >
+                  {t("settings.docs")}
+                </Link>
+              ),
+            }}
+          />
         }
-        title="Sign-in restrictions"
+        title={t("settings.restrictions")}
       />
       {isDisabled && (
         <Callout className="mb-6">
-          {access
-            ? "The Headscale configuration is read-only, so restrictions can't be changed here."
-            : "Your permissions don't allow changes to sign-in restrictions."}
+          {t(access ? "settings.restrictions.readOnly" : "settings.restrictions.noPermission")}
         </Callout>
       )}
       {!isDisabled && !isAutoApplied && (
         <Callout className="mb-6" variant="warning">
-          Changes are saved to the Headscale configuration but only take effect once Headscale
-          restarts. Set up an{" "}
-          <Link external styled to="https://headplane.net/configuration/integrations">
-            integration
-          </Link>{" "}
-          to restart it automatically.
+          <Trans
+            id="settings.restrictions.restart"
+            values={{
+              integration: (
+                <Link external styled to="https://headplane.net/configuration/integrations">
+                  {t("settings.restrictions.integration")}
+                </Link>
+              ),
+            }}
+          />
         </Callout>
       )}
       <RestrictionSection isDisabled={isDisabled} type="domain" values={settings.domains} />
@@ -84,5 +96,11 @@ export default function Page({
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  return <PageError error={error} page="sign-in restrictions" />;
+  const { t } = useI18n();
+  const localizedError =
+    isRouteErrorResponse(error) &&
+    error.data === "OIDC is not configured on this Headscale instance."
+      ? { ...error, data: t("settings.errors.oidcMissing") }
+      : error;
+  return <PageError error={localizedError} page={t("settings.restrictions.errorPage")} />;
 }

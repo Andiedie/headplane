@@ -1,5 +1,7 @@
 import { redirect } from "react-router";
 
+import { translate } from "~/i18n";
+import { getLocale } from "~/i18n/locale.server";
 import { authContext, headscaleContext } from "~/server/context";
 import { headscaleErrorMessage, isDataWithApiError } from "~/server/headscale/api/error-client";
 import log from "~/utils/log";
@@ -9,6 +11,7 @@ import type { Route } from "./+types/page";
 export async function loginAction({ request, context }: Route.LoaderArgs) {
   const auth = context.get(authContext);
   const headscale = context.get(headscaleContext);
+  const locale = await getLocale(request);
 
   const formData = await request.formData();
   const apiKey = formData.has("api_key") ? String(formData.get("api_key")).trim() : undefined;
@@ -21,7 +24,7 @@ export async function loginAction({ request, context }: Route.LoaderArgs) {
     );
     return {
       success: false,
-      message: "Enter an API key.",
+      message: translate(locale, "errors.apiKeyRequired"),
     };
   }
 
@@ -33,7 +36,7 @@ export async function loginAction({ request, context }: Route.LoaderArgs) {
     );
     return {
       success: false,
-      message: "Enter an API key.",
+      message: translate(locale, "errors.apiKeyRequired"),
     };
   }
 
@@ -41,7 +44,7 @@ export async function loginAction({ request, context }: Route.LoaderArgs) {
   if (!/^[\x21-\x7e]+$/.test(apiKey)) {
     return {
       success: false,
-      message: "That API key is invalid or has expired.",
+      message: translate(locale, "errors.apiKeyInvalid"),
     };
   }
 
@@ -60,7 +63,7 @@ export async function loginAction({ request, context }: Route.LoaderArgs) {
     if (!lookup) {
       return {
         success: false,
-        message: "That API key doesn't exist on this server.",
+        message: translate(locale, "errors.apiKeyMissing"),
       };
     }
 
@@ -68,7 +71,7 @@ export async function loginAction({ request, context }: Route.LoaderArgs) {
       log.error("auth", "Got an API key without an expiration");
       return {
         success: false,
-        message: "That API key has no expiration. Create a new one.",
+        message: translate(locale, "errors.apiKeyNoExpiration"),
       };
     }
 
@@ -76,7 +79,7 @@ export async function loginAction({ request, context }: Route.LoaderArgs) {
     if (expiry.getTime() < Date.now()) {
       return {
         success: false,
-        message: "That API key has expired.",
+        message: translate(locale, "errors.apiKeyExpired"),
       };
     }
 
@@ -101,7 +104,7 @@ export async function loginAction({ request, context }: Route.LoaderArgs) {
       ) {
         return {
           success: false,
-          message: "That API key is invalid or has expired.",
+          message: translate(locale, "errors.apiKeyInvalid"),
         };
       }
     }
@@ -114,7 +117,7 @@ export async function loginAction({ request, context }: Route.LoaderArgs) {
     log.debug("auth", "Error details: %o", error);
     return {
       success: false,
-      message: "Couldn't check the API key. See the server logs.",
+      message: translate(locale, "errors.apiKeyCheckFailed"),
     };
   }
 }

@@ -1,3 +1,5 @@
+import { useI18n } from "~/i18n/react";
+
 import Chip from "../chip";
 import Tooltip from "../tooltip";
 
@@ -6,20 +8,12 @@ export interface ExitNodeTagProps {
 }
 
 export function ExitNodeTag({ isEnabled }: ExitNodeTagProps) {
+  const { t } = useI18n();
   return (
     <Tooltip
-      content={
-        isEnabled ? (
-          <>This machine is acting as an exit node.</>
-        ) : (
-          <>
-            This machine is requesting to be used as an exit node. Review it from "Edit route
-            settings" in the machine's menu.
-          </>
-        )
-      }
+      content={t(isEnabled ? "components.tags.exitNodeActive" : "components.tags.exitNodePending")}
     >
-      <Chip text="Exit node" variant={isEnabled ? "neutral" : "warn"} />
+      <Chip text={t("components.tags.exitNode")} variant={isEnabled ? "neutral" : "warn"} />
     </Tooltip>
   );
 }

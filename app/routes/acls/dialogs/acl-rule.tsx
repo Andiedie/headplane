@@ -3,6 +3,7 @@ import { useState } from "react";
 import Input from "~/components/input";
 import Link from "~/components/link";
 import TokenList from "~/components/token-list";
+import { Trans, useI18n } from "~/i18n/react";
 import { withDefaultPort, type AclRule } from "~/utils/acl-policy";
 
 import EditorDialog from "./editor-dialog";
@@ -26,6 +27,7 @@ export default function AclRuleDialog({
   destinations,
   onSave,
 }: AclRuleDialogProps) {
+  const { t } = useI18n();
   const [draft, setDraft] = useState<AclRule>(() => structuredClone(rule ?? EMPTY));
 
   const isInvalid = draft.src.length === 0 || draft.dst.length === 0;
@@ -33,15 +35,18 @@ export default function AclRuleDialog({
   return (
     <EditorDialog
       description={
-        <>
-          Access rules allow traffic from a set of sources to a set of destinations. Destinations
-          must include a port, for example <code className="font-mono">tag:web:80,443</code>. If you
-          leave the port out, <code className="font-mono">:*</code> is added for you. See the{" "}
-          <Link external styled to="https://tailscale.com/kb/1018/acls">
-            Tailscale ACL guide
-          </Link>{" "}
-          for the full syntax.
-        </>
+        <Trans
+          id="policy.rules.dialogDescription"
+          values={{
+            example: <code className="font-mono">tag:web:80,443</code>,
+            allPorts: <code className="font-mono">:*</code>,
+            guide: (
+              <Link external styled to="https://tailscale.com/kb/1018/acls">
+                {t("policy.aclGuide")}
+              </Link>
+            ),
+          }}
+        />
       }
       isDisabled={isInvalid}
       isOpen={isOpen}
@@ -50,22 +55,22 @@ export default function AclRuleDialog({
         onSave({ ...draft, dst: draft.dst.map(withDefaultPort) });
       }}
       setIsOpen={setIsOpen}
-      submitLabel={rule ? "Update rule" : "Add rule"}
-      title={rule ? "Edit access rule" : "New access rule"}
+      submitLabel={rule ? t("policy.rules.update") : t("policy.rules.add")}
+      title={rule ? t("policy.rules.edit") : t("policy.rules.new")}
     >
       <TokenList
-        description="Groups, tags, hosts, users or autogroups allowed to initiate the connection."
-        emptyText="No sources yet"
-        label="Sources"
+        description={t("policy.sources.description")}
+        emptyText={t("policy.sources.empty")}
+        label={t("policy.sources.title")}
         onChange={(src) => setDraft({ ...draft, src })}
         placeholder="group:eng"
         suggestions={sources}
         values={draft.src}
       />
       <TokenList
-        description="Where the traffic is allowed to go. A destination without a port becomes :* (all ports)."
-        emptyText="No destinations yet"
-        label="Destinations"
+        description={t("policy.rules.destinationsDescription")}
+        emptyText={t("policy.destinations.empty")}
+        label={t("policy.destinations.title")}
         normalize={withDefaultPort}
         onChange={(dst) => setDraft({ ...draft, dst })}
         placeholder="tag:web:80,443"
@@ -73,8 +78,8 @@ export default function AclRuleDialog({
         values={draft.dst}
       />
       <Input
-        description="Optional. Restricts the rule to a single protocol (tcp, udp, icmp, ...)."
-        label="Protocol"
+        description={t("policy.rules.protocolDescription")}
+        label={t("policy.rules.protocol")}
         onChange={(proto) => setDraft({ ...draft, proto: proto.length > 0 ? proto : undefined })}
         placeholder="tcp"
         value={draft.proto ?? ""}

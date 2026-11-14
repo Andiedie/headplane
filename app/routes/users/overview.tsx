@@ -5,6 +5,7 @@ import Link from "~/components/link";
 import PageError from "~/components/page-error";
 import PageHeader from "~/components/page-header";
 import { Table, TableBody, TableHeader } from "~/components/table";
+import { Trans, useI18n } from "~/i18n/react";
 import {
   appConfigContext,
   authContext,
@@ -20,7 +21,7 @@ import type { Machine, User } from "~/types";
 import { groupsForUser, parsePolicy } from "~/utils/acl-policy";
 import log from "~/utils/log";
 import { toastClientAction } from "~/utils/toast";
-import { getUserDisplayName } from "~/utils/user";
+import { getUserDisplayName, isTaggedDevicesUser } from "~/utils/user";
 
 import type { Route } from "./+types/overview";
 import HeadplaneUserRow from "./components/headplane-user-row";
@@ -159,6 +160,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const headscaleUsersForLink = apiUsers.map((u) => ({
     id: u.id,
     name: getUserDisplayName(u),
+    isTaggedDevices: isTaggedDevicesUser(u),
     claimed: claimedIds.has(u.id),
   }));
 
@@ -188,6 +190,7 @@ export const action = userAction;
 export const clientAction = toastClientAction;
 
 export default function Page({ loaderData }: Route.ComponentProps) {
+  const { t } = useI18n();
   return (
     <>
       <PageHeader
@@ -196,45 +199,52 @@ export default function Page({ loaderData }: Route.ComponentProps) {
         }
         description={
           loaderData.oidc ? (
-            <>
-              People who can sign in to Headplane, managed through your{" "}
-              <Link external styled to={loaderData.oidc.issuer}>
-                OIDC provider
-              </Link>
-              .
-            </>
+            <Trans
+              id="users.overview.oidcDescription"
+              values={{
+                provider: (
+                  <Link external styled to={loaderData.oidc.issuer}>
+                    {t("users.oidcProvider")}
+                  </Link>
+                ),
+              }}
+            />
           ) : (
-            <>
-              People in your tailnet, managed locally.{" "}
-              <Link external styled to="https://headscale.net/stable/ref/oidc">
-                Set up OIDC
-              </Link>
-            </>
+            <Trans
+              id="users.overview.localDescription"
+              values={{
+                setup: (
+                  <Link external styled to="https://headscale.net/stable/ref/oidc">
+                    {t("users.setupOidc")}
+                  </Link>
+                ),
+              }}
+            />
           )
         }
-        title="Users"
+        title={t("users.title")}
       />
 
       {loaderData.apiError && (
         <Callout className="mb-6" variant="error">
-          {loaderData.apiError}
+          {t("users.apiUnavailable")}
         </Callout>
       )}
 
       <section>
-        <h2 className="mb-2 font-semibold">Headplane users</h2>
+        <h2 className="mb-2 font-semibold">{t("users.headplaneUsers")}</h2>
         {loaderData.headplaneUsers.length === 0 ? (
-          <p className="text-muted text-sm">No users have signed into Headplane yet.</p>
+          <p className="text-muted text-sm">{t("users.empty")}</p>
         ) : (
           <Table>
             <thead>
               <tr>
-                <TableHeader>User</TableHeader>
-                <TableHeader>Role</TableHeader>
-                <TableHeader>Last login</TableHeader>
-                <TableHeader>Last seen</TableHeader>
+                <TableHeader>{t("users.user")}</TableHeader>
+                <TableHeader>{t("users.role")}</TableHeader>
+                <TableHeader>{t("users.lastLogin")}</TableHeader>
+                <TableHeader>{t("users.lastSeen")}</TableHeader>
                 <TableHeader className="w-12">
-                  <span className="sr-only">Actions</span>
+                  <span className="sr-only">{t("users.actions")}</span>
                 </TableHeader>
               </tr>
             </thead>
@@ -258,18 +268,16 @@ export default function Page({ loaderData }: Route.ComponentProps) {
 
       {!loaderData.apiError && loaderData.unlinkedHeadscaleUsers.length > 0 && (
         <section className="mt-10">
-          <h2 className="font-semibold">Unlinked Headscale users</h2>
-          <p className="text-muted mb-2 text-sm">
-            These Headscale users have no Headplane account, so Headplane can't manage their access.
-          </p>
+          <h2 className="font-semibold">{t("users.unlinked")}</h2>
+          <p className="text-muted mb-2 text-sm">{t("users.unlinkedDescription")}</p>
           <Table>
             <thead>
               <tr>
-                <TableHeader>User</TableHeader>
-                <TableHeader>Created</TableHeader>
-                <TableHeader>Last seen</TableHeader>
+                <TableHeader>{t("users.user")}</TableHeader>
+                <TableHeader>{t("users.created")}</TableHeader>
+                <TableHeader>{t("users.lastSeen")}</TableHeader>
                 <TableHeader className="w-12">
-                  <span className="sr-only">Actions</span>
+                  <span className="sr-only">{t("users.actions")}</span>
                 </TableHeader>
               </tr>
             </thead>
@@ -293,5 +301,6 @@ export default function Page({ loaderData }: Route.ComponentProps) {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  return <PageError error={error} page="users" />;
+  const { t } = useI18n();
+  return <PageError error={error} page={t("users.errorPage")} />;
 }

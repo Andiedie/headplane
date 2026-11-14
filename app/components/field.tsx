@@ -3,6 +3,7 @@ import { Info } from "lucide-react";
 import type React from "react";
 
 import Tooltip from "~/components/tooltip";
+import { useI18n } from "~/i18n/react";
 import cn from "~/utils/cn";
 
 export const controlClass = cn(
@@ -41,6 +42,7 @@ export default function Field({
   className,
   children,
 }: FieldProps) {
+  const { t } = useI18n();
   return (
     <BaseField.Root
       className={cn("group flex w-full flex-col gap-1.5", className)}
@@ -54,7 +56,7 @@ export default function Field({
           <BaseField.Label className="text-fg text-sm font-medium">{label}</BaseField.Label>
           <Tooltip className="w-72" content={labelTooltip}>
             <Info
-              aria-label={`About ${label}`}
+              aria-label={t("components.field.about", { label })}
               className="text-muted hover:text-fg size-3.5 transition-colors"
             />
           </Tooltip>

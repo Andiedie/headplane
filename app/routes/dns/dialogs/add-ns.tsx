@@ -5,6 +5,7 @@ import ActionDialog from "~/components/action-dialog";
 import Button from "~/components/button";
 import Input from "~/components/input";
 import { SwitchField } from "~/components/switch";
+import { useI18n } from "~/i18n/react";
 import { fieldValidator } from "~/utils/form";
 
 import { nameserver } from "../schemas";
@@ -12,39 +13,40 @@ import { nameserver } from "../schemas";
 const validateNameserver = fieldValidator(nameserver);
 
 export default function AddNameserver() {
+  const { t } = useI18n();
   const [isSplit, setIsSplit] = useState(false);
 
   return (
     <ActionDialog
       intent="add_ns"
       onOpenChange={(isOpen) => isOpen && setIsSplit(false)}
-      submitLabel="Add nameserver"
-      title="Add nameserver"
+      submitLabel={t("dns.nameservers.add")}
+      title={t("dns.nameservers.add")}
       trigger={
         <Button>
           <Plus className="size-3.5" />
-          Add nameserver
+          {t("dns.nameservers.add")}
         </Button>
       }
     >
       <Input
-        description="Use this IPv4 or IPv6 address to resolve names."
-        label="Nameserver"
+        description={t("dns.nameservers.addressDescription")}
+        label={t("dns.nameserver")}
         name="nameserver"
         placeholder="1.2.3.4"
         required
-        validate={validateNameserver}
+        validate={(value) => (validateNameserver(value) ? t("dns.errors.ip") : null)}
       />
       <SwitchField
         checked={isSplit}
-        description="Split DNS. Only Tailscale 1.8 and later use this nameserver."
-        label="Restrict to domain"
+        description={t("dns.nameservers.splitDescription")}
+        label={t("dns.nameservers.restrictDomain")}
         onCheckedChange={setIsSplit}
       />
       {isSplit && (
         <Input
-          description="Only queries for this domain and its subdomains use the nameserver."
-          label="Domain"
+          description={t("dns.nameservers.domainDescription")}
+          label={t("dns.domain")}
           name="split_domain"
           placeholder="example.com"
           required

@@ -7,6 +7,7 @@ import Button from "~/components/button";
 import Callout from "~/components/callout";
 import Code from "~/components/code";
 import Link from "~/components/link";
+import { Trans, useI18n } from "~/i18n/react";
 import Shell from "~/routes/auth/login/shell";
 import {
   agentsContext,
@@ -120,6 +121,7 @@ function generateHostname(username: string) {
 }
 
 export default function Page({ loaderData }: Route.ComponentProps) {
+  const { t } = useI18n();
   const { hostname, username, offline, node, compatibilityWarning } = loaderData;
   const wasmUrl = useHref("/hp_ssh.wasm");
   preload(wasmUrl, { as: "fetch", type: "application/wasm", crossOrigin: "anonymous" });
@@ -129,11 +131,11 @@ export default function Page({ loaderData }: Route.ComponentProps) {
       <>
         <BrowserSSHCompatibilityBanner warning={compatibilityWarning} />
         <Shell
-          description="It isn't connected to the tailnet right now. Start Tailscale on it, then try again."
-          title={`${hostname} is offline`}
+          description={t("ssh.offline.description")}
+          title={t("ssh.offline.title", { hostname })}
         >
           <Button onClick={() => window.location.reload()} variant="primary">
-            Try again
+            {t("ssh.retry")}
           </Button>
         </Shell>
       </>
@@ -162,6 +164,7 @@ function BrowserSSHCompatibilityBanner({
 }: {
   warning: { version: string } | null | undefined;
 }) {
+  const { t } = useI18n();
   if (!warning) return null;
 
   return (
@@ -170,15 +173,21 @@ function BrowserSSHCompatibilityBanner({
         className="bg-raised"
         isDismissable
         variant="warning"
-        title={`Browser SSH is broken on Headscale ${warning.version}`}
+        title={t("ssh.compatibility.title", { version: warning.version })}
       >
-        Headscale 0.29 beta releases through 0.29.1 reject Tailscale's browser/WASM{" "}
-        <Code>/ts2021</Code> WebSocket request with <Code>405 Method Not Allowed</Code>. Upgrade
-        Headscale to 0.29.2 or newer, or use Headscale 0.28.x.
+        <Trans
+          id="ssh.compatibility.description"
+          values={{ endpoint: <Code>/ts2021</Code>, status: <Code>405 Method Not Allowed</Code> }}
+        />
       </Callout>
     </div>
   );
 }
+
+type SSHStatus =
+  | { kind: "joining" }
+  | { kind: "connecting" }
+  | { kind: "stopped" | "failed"; error: string };
 
 function SSHConsole({
   hostname,
@@ -191,11 +200,12 @@ function SSHConsole({
   wasmUrl: string;
   node: { ipAddress: string; controlURL: string; preAuthKey: string; ephemeralHostname: string };
 }) {
+  const { t } = useI18n();
   const [ipn, setIpn] = useState<IPN | null>(null);
   const [isTerminalShown, setIsTerminalShown] = useState(false);
   const [isWasmMissing, setIsWasmMissing] = useState(false);
   const [authUrl, setAuthUrl] = useState<string>();
-  const [status, setStatus] = useState("Joining Tailnet…");
+  const [status, setStatus] = useState<SSHStatus>({ kind: "joining" });
   const wasmHelperUrl = useHref("/wasm_exec.js");
 
   // Stable, so the terminal isn't torn down and reconnected on re-render.
@@ -217,12 +227,12 @@ function SSHConsole({
       wasmUrl,
       wasmHelperUrl,
       onPanic: (error) => {
-        if (!cancelled) setStatus(`Tailnet node stopped: ${error}`);
+        if (!cancelled) setStatus({ kind: "stopped", error: String(error) });
       },
     }).then(
       (instance) => {
         if (cancelled) return;
-        setStatus(`Connecting to ${hostname}…`);
+        setStatus({ kind: "connecting" });
         setIpn(instance);
       },
       (error: unknown) => {
@@ -232,7 +242,10 @@ function SSHConsole({
           return;
         }
 
-        setStatus(`Failed to join Tailnet: ${error instanceof Error ? error.message : error}`);
+        setStatus({
+          kind: "failed",
+          error: error instanceof Error ? error.message : String(error),
+        });
       },
     );
 
@@ -248,18 +261,33 @@ function SSHConsole({
   return (
     <div className="fixed inset-0 flex flex-col bg-black">
       {authUrl && (
-        <Callout className="m-4" title="Sign in to continue" variant="warning">
-          {hostname} needs you to sign in again before it opens the session.{" "}
-          <Link external styled to={authUrl}>
-            Sign in
-          </Link>
+        <Callout className="m-4" title={t("ssh.console.signInTitle")} variant="warning">
+          <Trans
+            id="ssh.console.signInDescription"
+            values={{
+              hostname,
+              link: (
+                <Link external styled to={authUrl}>
+                  {t("ssh.console.signIn")}
+                </Link>
+              ),
+            }}
+          />
         </Callout>
       )}
       {!isTerminalShown && (
         <div className="absolute inset-0 z-50 flex items-center justify-center">
           <div className="flex flex-col items-center gap-3">
             <Loader2 className="text-faint size-8 animate-spin" />
-            <p className="text-muted text-sm">{status}</p>
+            <p className="text-muted text-sm" role="status">
+              {status.kind === "joining"
+                ? t("ssh.console.joining")
+                : status.kind === "connecting"
+                  ? t("ssh.console.connecting", { hostname })
+                  : t(status.kind === "stopped" ? "ssh.console.stopped" : "ssh.console.failed", {
+                      error: status.error,
+                    })}
+            </p>
           </div>
         </div>
       )}
@@ -284,7 +312,5 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
     throw error;
   }
 
-  return (
-    <SSHError anchor={routeError.anchor} message={routeError.message} title={routeError.title} />
-  );
+  return <SSHError {...routeError} />;
 }

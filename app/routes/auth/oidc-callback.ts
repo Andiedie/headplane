@@ -1,5 +1,7 @@
 import { data, redirect } from "react-router";
 
+import { translate } from "~/i18n";
+import { getLocale } from "~/i18n/locale.server";
 import {
   appConfigContext,
   authContext,
@@ -24,7 +26,10 @@ export async function loader({ request, context, url }: Route.LoaderArgs) {
   const oidc = context.get(oidcContext);
 
   if (oidc.state !== "enabled") {
-    throw data(`OIDC is unavailable: ${oidc.reason}`, { status: 501 });
+    throw data(
+      translate(await getLocale(request), "errors.oidcUnavailable", { reason: oidc.reason }),
+      { status: 501 },
+    );
   }
   const service = oidc.value;
 

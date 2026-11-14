@@ -2,8 +2,9 @@ import { useState } from "react";
 
 import ActionDialog from "~/components/action-dialog";
 import Select from "~/components/select";
+import { useI18n } from "~/i18n/react";
 import type { Machine, User } from "~/types";
-import { getUserDisplayName, sortUsersByDisplayName } from "~/utils/user";
+import { getUserDisplayName, isTaggedDevicesUser, sortUsersByDisplayName } from "~/utils/user";
 
 interface MoveProps {
   machine: Machine;
@@ -13,29 +14,30 @@ interface MoveProps {
 }
 
 export default function Move({ machine, users, isOpen, setIsOpen }: MoveProps) {
+  const { t } = useI18n();
   const [userId, setUserId] = useState(machine.user?.id ?? null);
 
   return (
     <ActionDialog
-      description="The owner is the user the machine belongs to."
+      description={t("machines.move.description")}
       fields={{ node_id: machine.id }}
       intent="reassign"
       isDisabled={!userId || userId === machine.user?.id}
       onOpenChange={setIsOpen}
       open={isOpen}
-      submitLabel="Change owner"
-      title={`Change owner of ${machine.givenName}`}
+      submitLabel={t("machines.changeOwner")}
+      title={t("machines.move.title", { name: machine.givenName })}
     >
       <Select
         defaultValue={machine.user?.id ?? null}
         items={sortUsersByDisplayName(users).map((user) => ({
           value: user.id,
-          label: getUserDisplayName(user),
+          label: isTaggedDevicesUser(user) ? t("machines.tagOwned") : getUserDisplayName(user),
         }))}
-        label="Owner"
+        label={t("machines.owner")}
         name="user_id"
         onValueChange={setUserId}
-        placeholder="Select a user"
+        placeholder={t("machines.selectUser")}
         required
       />
     </ActionDialog>

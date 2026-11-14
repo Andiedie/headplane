@@ -1,9 +1,12 @@
+import { useI18n } from "~/i18n/react";
+
 import Chip from "../chip";
 import Tooltip from "../tooltip";
 
 export function TailscaleSSHTag() {
+  const { t } = useI18n();
   return (
-    <Tooltip content="This machine advertises Tailscale SSH, which allows you to authenticate SSH credentials using your Tailscale account and via the Headplane web UI.">
+    <Tooltip content={t("components.tags.sshDescription")}>
       <Chip text="SSH" />
     </Tooltip>
   );
