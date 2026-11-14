@@ -10,6 +10,7 @@
 
 ## Changes
 
+- The network-overview development branch publishes standard and shell-enabled AMD64/ARM64 images to GHCR after validation; channel tags and commit tags are available without deploying a running instance.
 - The Network page shows reported home relays, client-reported latency, and logical device relationships. Optional settings add single-region DERP map selection, native relay counters, and bounded observation history, without additional software on devices.
 - Headplane can be served under a path other than `/admin` by setting `server.base_path`, without building it from source (closes [#637](https://github.com/tale/headplane/issues/637)).
 - Headplane has a new color palette built from its logo: warm greys, black primary buttons, and a muted blue that marks links, focus, and the current page. Dark mode now separates the page, menus, and dialogs by shade so overlays stand out, and secondary text is easier to read in both themes (via [#651](https://github.com/tale/headplane/issues/651)).

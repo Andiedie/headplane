@@ -1,0 +1,139 @@
+name: Network image
+
+on:
+  push:
+    branches:
+      - feat/network-overview
+
+concurrency:
+  group: network-image-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Validate before publishing
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: package.json
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check types
+        run: pnpm run typecheck
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Run unit tests
+        run: pnpm test:unit
+
+  publish:
+    name: Publish (${{ matrix.target }})
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: final
+            suffix: ""
+          - target: debug-shell
+            suffix: "-shell"
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Prepare image name and version
+        id: image
+        shell: bash
+        run: |
+          IMAGE="ghcr.io/${GITHUB_REPOSITORY,,}"
+          VERSION="$(node -p "require('./package.json').version")-network.g${GITHUB_SHA:0:12}"
+          printf 'name=%s\nversion=%s\n' "$IMAGE" "$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
+        with:
+          images: ${{ steps.image.outputs.name }}
+          tags: |
+            type=raw,value=network-overview
+            type=sha,format=long
+          flavor: |
+            latest=false
+            suffix=${{ matrix.suffix }}
+          labels: |
+            org.opencontainers.image.version=${{ steps.image.outputs.version }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
+        with:
+          platforms: arm64
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: ./Dockerfile
+          target: ${{ matrix.target }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          provenance: true
+          cache-from: type=gha,scope=network-${{ matrix.target }}
+          cache-to: type=gha,mode=max,scope=network-${{ matrix.target }}
+          build-args: |
+            IMAGE_TAG=${{ steps.image.outputs.name }}:network-overview
+            HEADPLANE_VERSION=${{ steps.image.outputs.version }}
+
+      - name: Verify published manifest and summarize
+        env:
+          IMAGE: ${{ steps.image.outputs.name }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+          SUFFIX: ${{ matrix.suffix }}
+        run: |
+          docker buildx imagetools inspect "$IMAGE@$DIGEST"
+          {
+            printf '### Published image\n\n'
+            printf -- '- Channel: `%s:network-overview%s`\n' "$IMAGE" "$SUFFIX"
+            printf -- '- Commit: `%s:sha-%s%s`\n' "$IMAGE" "$GITHUB_SHA" "$SUFFIX"
+            printf -- '- Digest: `%s@%s`\n' "$IMAGE" "$DIGEST"
+            printf -- '- Platforms: `linux/amd64`, `linux/arm64`\n'
+          } >> "$GITHUB_STEP_SUMMARY"
