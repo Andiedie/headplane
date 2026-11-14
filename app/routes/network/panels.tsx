@@ -4,6 +4,9 @@ import { useFetcher } from "react-router";
 import Button from "~/components/button";
 import Callout from "~/components/callout";
 import Link from "~/components/link";
+import { type Locale, translate } from "~/i18n";
+import { en } from "~/i18n/messages/network";
+import { Trans, useI18n } from "~/i18n/react";
 import cn from "~/utils/cn";
 
 import type { action, loader } from "./overview";
@@ -12,6 +15,7 @@ type Data = Awaited<ReturnType<typeof loader>>;
 type NetworkNode = Data["snapshot"]["nodes"][number];
 
 export function Overview({ data }: { data: Data }) {
+  const { locale, t } = useI18n();
   const nodes = data.snapshot.nodes;
   const online = nodes.filter((n) => n.online).length;
   const pending = nodes.filter((n) => n.pendingRoutes.length > 0).length;
@@ -26,32 +30,42 @@ export function Overview({ data }: { data: Data }) {
   return (
     <div className="space-y-6">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Devices" value={nodes.length} note={`${online} connected to Headscale`} />
-        <Stat label="Offline" value={nodes.length - online} note="Control connection status" />
-        <Stat label="Pending routes" value={pending} note="Devices awaiting route approval" />
-        <Stat label="Expiring soon" value={expiring} note="Within the next 7 days" />
+        <Stat
+          label={t("network.overview.devices")}
+          value={nodes.length}
+          note={t("network.overview.connected", { count: online.toLocaleString(locale) })}
+        />
+        <Stat
+          label={t("network.state.offline")}
+          value={nodes.length - online}
+          note={t("network.overview.connectionStatus")}
+        />
+        <Stat
+          label={t("network.overview.pendingRoutes")}
+          value={pending}
+          note={t("network.overview.awaitingApproval")}
+        />
+        <Stat
+          label={t("network.overview.expiringSoon")}
+          value={expiring}
+          note={t("network.overview.nextWeek")}
+        />
       </div>
-      {!data.agent.enabled && (
-        <Callout>
-          Enable the built-in Headplane Agent to see reported home relays and network details. No
-          additional software is needed on devices.
-        </Callout>
-      )}
+      {!data.agent.enabled && <Callout>{t("network.overview.enableAgent")}</Callout>}
       {data.agent.enabled && (
         <p className="text-muted text-xs">
-          Agent last synchronized: {time(data.agent.syncedAt)}. Device reports may be older than
-          this synchronization.{data.agent.error ? " The latest synchronization has an error." : ""}
+          {t("network.overview.agentSynced", { time: time(data.agent.syncedAt, locale) })}
+          {data.agent.error ? t("network.overview.agentError") : ""}
         </p>
       )}
       <section
         className="border-line rounded-lg border p-5"
-        aria-label="Reported home relay relationships"
+        aria-label={t("network.overview.relationshipsLabel")}
       >
         <div className="mb-5">
-          <h2 className="font-semibold">Reported home relays</h2>
+          <h2 className="font-semibold">{t("network.overview.homeRelays")}</h2>
           <p className="text-muted mt-1 text-sm">
-            Logical relationships, not active traffic paths. Devices can communicate directly
-            regardless of their home relay.
+            {t("network.overview.relationshipsDescription")}
           </p>
         </div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -60,9 +74,20 @@ export function Overview({ data }: { data: Data }) {
               <div className="mb-3 flex items-center justify-between gap-3">
                 <span className="flex items-center gap-2 text-sm font-semibold">
                   <Server className="text-accent size-4" />
-                  {id === "unknown" ? "Not reported" : members[0].homeName}
+                  {id === "unknown"
+                    ? t("network.state.notReported")
+                    : regionName(
+                        members[0].homeRegion!,
+                        members[0].homeName,
+                        data.relay.regions,
+                        locale,
+                      )}
                 </span>
-                <span className="text-muted text-xs">{members.length} devices</span>
+                <span className="text-muted text-xs">
+                  {t("network.overview.deviceCount", {
+                    count: members.length.toLocaleString(locale),
+                  })}
+                </span>
               </div>
               <ul className="border-line ml-2 space-y-2 border-l pl-4">
                 {members.map((node) => (
@@ -73,7 +98,7 @@ export function Overview({ data }: { data: Data }) {
                     </Link>
                     {node.approvedRoutes.length > 0 && (
                       <p className="text-muted mt-1 text-xs break-all">
-                        Approved: {node.approvedRoutes.join(", ")}
+                        {t("network.overview.approved", { routes: node.approvedRoutes.join(", ") })}
                       </p>
                     )}
                   </li>
@@ -81,75 +106,119 @@ export function Overview({ data }: { data: Data }) {
               </ul>
             </div>
           ))}
-          {nodes.length === 0 && <p className="text-muted text-sm">No devices registered.</p>}
+          {nodes.length === 0 && (
+            <p className="text-muted text-sm">{t("network.overview.noDevices")}</p>
+          )}
         </div>
       </section>
       <section className="border-line overflow-hidden rounded-lg border">
         <div className="border-line border-b p-5">
-          <h2 className="font-semibold">Device network details</h2>
-          <p className="text-muted mt-1 text-sm">
-            Expand a device for reported relay latency, candidate endpoints, and routes. Unknown
-            values are not failures.
-          </p>
+          <h2 className="font-semibold">{t("network.overview.details")}</h2>
+          <p className="text-muted mt-1 text-sm">{t("network.overview.detailsDescription")}</p>
         </div>
         {nodes.map((node) => (
-          <Device key={node.id} node={node} />
+          <Device key={node.id} node={node} regions={data.relay.regions} />
         ))}
       </section>
     </div>
   );
 }
 
-function Device({ node }: { node: NetworkNode }) {
+function Device({ node, regions }: { node: NetworkNode; regions: Data["relay"]["regions"] }) {
+  const { locale, t } = useI18n();
   return (
     <details className="border-line border-b last:border-b-0">
       <summary className="focus-ring hover:bg-hover grid cursor-pointer gap-2 px-5 py-4 text-sm sm:grid-cols-3">
         <span className="font-medium">
           <Dot online={node.online} />
           {node.name}
-          {node.expired && <span className="text-warn ml-2 text-xs">Expired</span>}
+          {node.expired && (
+            <span className="text-warn ml-2 text-xs">{t("network.state.expired")}</span>
+          )}
         </span>
         <span className="text-muted">
-          {node.homeRegion === null ? "Home relay not reported" : node.homeName}
+          {node.homeRegion === null
+            ? t("network.device.homeNotReported")
+            : regionName(node.homeRegion, node.homeName, regions, locale)}
         </span>
         <span className="text-muted sm:text-right">
-          UDP {bool(node.udp)} · IPv6 {bool(node.ipv6)}
+          {t("network.device.protocols", {
+            udp: bool(node.udp, locale),
+            ipv6: bool(node.ipv6, locale),
+          })}
         </span>
       </summary>
       <div className="bg-subtle grid gap-6 px-5 pt-3 pb-5 text-sm md:grid-cols-2">
         <div className="space-y-2">
-          <p>
-            <span className="text-muted">Client: </span>
-            {[node.os, node.version].filter(Boolean).join(" · ") || "Not reported"}
+          <p className="text-muted">
+            <Trans
+              id="network.device.client"
+              values={{
+                value: (
+                  <span className="text-fg">
+                    {[node.os, node.version].filter(Boolean).join(" · ") ||
+                      t("network.state.notReported")}
+                  </span>
+                ),
+              }}
+            />
           </p>
-          <p>
-            <span className="text-muted">Addresses: </span>
-            {node.ipAddresses.join(", ")}
+          <p className="text-muted">
+            <Trans
+              id="network.device.addresses"
+              values={{ value: <span className="text-fg">{node.ipAddresses.join(", ")}</span> }}
+            />
           </p>
-          <p>
-            <span className="text-muted">NAT varies by destination: </span>
-            {bool(node.natVaries)}
+          <p className="text-muted">
+            <Trans
+              id="network.device.nat"
+              values={{ value: <span className="text-fg">{bool(node.natVaries, locale)}</span> }}
+            />
           </p>
-          <p className="break-all">
-            <span className="text-muted">Candidate endpoints: </span>
-            {node.endpoints.join(", ") || "Not reported"}
+          <p className="text-muted break-all">
+            <Trans
+              id="network.device.endpoints"
+              values={{
+                value: (
+                  <span className="text-fg">
+                    {node.endpoints.join(", ") || t("network.state.notReported")}
+                  </span>
+                ),
+              }}
+            />
           </p>
-          <p className="break-all">
-            <span className="text-muted">Approved routes: </span>
-            {node.approvedRoutes.join(", ") || "None"}
+          <p className="text-muted break-all">
+            <Trans
+              id="network.device.approved"
+              values={{
+                value: (
+                  <span className="text-fg">
+                    {node.approvedRoutes.join(", ") || t("network.state.none")}
+                  </span>
+                ),
+              }}
+            />
           </p>
-          <p className="break-all">
-            <span className="text-muted">Pending routes: </span>
-            {node.pendingRoutes.join(", ") || "None"}
+          <p className="text-muted break-all">
+            <Trans
+              id="network.device.pending"
+              values={{
+                value: (
+                  <span className="text-fg">
+                    {node.pendingRoutes.join(", ") || t("network.state.none")}
+                  </span>
+                ),
+              }}
+            />
           </p>
           <Link styled to={`/machines/${node.id}`}>
-            Manage device <ArrowRight className="inline size-3" />
+            {t("network.device.manage")} <ArrowRight className="inline size-3" />
           </Link>
         </div>
         <div>
-          <h3 className="mb-2 font-medium">Reported DERP latency</h3>
+          <h3 className="mb-2 font-medium">{t("network.device.latency")}</h3>
           {node.latencies.length === 0 ? (
-            <p className="text-muted">No measurements reported.</p>
+            <p className="text-muted">{t("network.device.noMeasurements")}</p>
           ) : (
             <ul className="space-y-1">
               {node.latencies.map((latency) => (
@@ -158,16 +227,22 @@ function Device({ node }: { node: NetworkNode }) {
                   key={`${latency.regionId}-${latency.family}`}
                 >
                   <span>
-                    {latency.regionName} <span className="text-muted">{latency.family}</span>
+                    {regionName(latency.regionId, latency.regionName, regions, locale)}{" "}
+                    <span className="text-muted">{latency.family}</span>
                   </span>
-                  <span className="font-mono">{latency.milliseconds.toFixed(1)} ms</span>
+                  <span className="font-mono">
+                    {t("network.device.latencyValue", {
+                      value: latency.milliseconds.toLocaleString(locale, {
+                        minimumFractionDigits: 1,
+                        maximumFractionDigits: 1,
+                      }),
+                    })}
+                  </span>
                 </li>
               ))}
             </ul>
           )}
-          <p className="text-muted mt-3 text-xs">
-            Client-reported probe results; not a live bandwidth test.
-          </p>
+          <p className="text-muted mt-3 text-xs">{t("network.device.latencyDescription")}</p>
         </div>
       </div>
     </details>
@@ -175,6 +250,7 @@ function Device({ node }: { node: NetworkNode }) {
 }
 
 export function Relays({ data }: { data: Data }) {
+  const { locale, t } = useI18n();
   const fetcher = useFetcher<typeof action>();
   const selected = data.relay.selectedRegionId;
   const matched = data.snapshot.nodes.filter((n) => n.online && n.homeRegion === selected).length;
@@ -183,16 +259,25 @@ export function Relays({ data }: { data: Data }) {
   return (
     <div className="space-y-6">
       <section className="border-line rounded-lg border p-5">
-        <h2 className="font-semibold">Relay selection</h2>
-        <p className="text-muted mt-1 text-sm">
-          Publish one region in the managed DERP map. Direct connections are still preferred when
-          available.
-        </p>
-        {data.relay.reason && <Callout className="mt-4">{data.relay.reason}</Callout>}
+        <h2 className="font-semibold">{t("network.relay.title")}</h2>
+        <p className="text-muted mt-1 text-sm">{t("network.relay.description")}</p>
+        {data.relay.reason && (
+          <Callout className="mt-4">{networkMessage(data.relay.reason, locale)}</Callout>
+        )}
         {result && (
           <div role="status" className="mt-4">
             <Callout variant={result.ok ? undefined : "error"}>
-              {result.ok ? result.message : Object.values(result.errors).join(" ")}
+              {result.ok
+                ? networkMessage(result.message ?? "", locale)
+                : Object.entries(result.errors)
+                    .map(([field, message]) =>
+                      field === "region"
+                        ? t("network.error.invalidRegion")
+                        : field === "revision"
+                          ? t("network.error.conflict")
+                          : networkMessage(message, locale),
+                    )
+                    .join(" ")}
             </Callout>
           </div>
         )}
@@ -203,7 +288,7 @@ export function Relays({ data }: { data: Data }) {
             disabled={!data.canSelectRelay || !data.relay.writable || fetcher.state !== "idle"}
             className="space-y-4"
           >
-            <legend className="sr-only">Choose the advertised relay region</legend>
+            <legend className="sr-only">{t("network.relay.choose")}</legend>
             <div className="grid gap-3 sm:grid-cols-2">
               {data.relay.regions.map((region) => (
                 <label
@@ -221,11 +306,11 @@ export function Relays({ data }: { data: Data }) {
                   <span>
                     <span className="block text-sm font-medium">{region.name}</span>
                     <span className="text-muted text-xs">
-                      {region.code} · Region {region.id}
+                      {t("network.relay.region", { code: region.code, id: region.id })}
                     </span>
                   </span>
                   {selected === region.id && (
-                    <span className="text-accent ml-auto text-xs">Saved</span>
+                    <span className="text-accent ml-auto text-xs">{t("network.relay.saved")}</span>
                   )}
                 </label>
               ))}
@@ -236,82 +321,84 @@ export function Relays({ data }: { data: Data }) {
               disabled={!data.relay.regions.length}
               pending={fetcher.state !== "idle"}
             >
-              Save relay selection
+              {t(fetcher.state === "idle" ? "network.relay.save" : "network.relay.saving")}
             </Button>
           </fieldset>
         </fetcher.Form>
         {!data.canSelectRelay && (
-          <p className="text-muted mt-3 text-sm">
-            Your role can view relays but cannot change the selection.
-          </p>
+          <p className="text-muted mt-3 text-sm">{t("network.relay.readOnly")}</p>
         )}
         <div className="border-line mt-5 grid gap-4 border-t pt-5 text-sm md:grid-cols-3">
           <div>
-            <p className="text-muted text-xs">Configuration</p>
-            <p className="mt-1">
-              {selected === null ? "No single region selected" : `Region ${selected} saved`}
-            </p>
-          </div>
-          <div>
-            <p className="text-muted text-xs">Headscale load status</p>
-            <p className="mt-1">Not directly observable</p>
-            <p className="text-muted mt-1 text-xs">
-              {data.relay.refreshInterval
-                ? `Configured refresh: ${data.relay.refreshInterval}`
-                : "Refresh interval unavailable"}
-            </p>
-          </div>
-          <div>
-            <p className="text-muted text-xs">Reported home relay</p>
+            <p className="text-muted text-xs">{t("network.relay.configuration")}</p>
             <p className="mt-1">
               {selected === null
-                ? "No selection to compare"
-                : `${matched} of ${known} reporting online devices match`}
+                ? t("network.relay.noSingleSelection")
+                : t("network.relay.selected", { id: selected })}
             </p>
-            <p className="text-muted mt-1 text-xs">Does not confirm every device has switched.</p>
+          </div>
+          <div>
+            <p className="text-muted text-xs">{t("network.relay.loadStatus")}</p>
+            <p className="mt-1">{t("network.relay.notObservable")}</p>
+            <p className="text-muted mt-1 text-xs">
+              {data.relay.refreshInterval
+                ? t("network.relay.refreshInterval", { interval: data.relay.refreshInterval })
+                : t("network.relay.refreshUnavailable")}
+            </p>
+          </div>
+          <div>
+            <p className="text-muted text-xs">{t("network.relay.reportedHome")}</p>
+            <p className="mt-1">
+              {selected === null
+                ? t("network.relay.noComparison")
+                : t("network.relay.matches", {
+                    matched: matched.toLocaleString(locale),
+                    known: known.toLocaleString(locale),
+                  })}
+            </p>
+            <p className="text-muted mt-1 text-xs">{t("network.relay.matchDisclaimer")}</p>
           </div>
         </div>
       </section>
       <section className="border-line rounded-lg border p-5">
-        <h2 className="font-semibold">Relay traffic</h2>
-        <p className="text-muted mt-1 text-sm">
-          Native DERP counters only. Direct traffic is not included; sent and received bytes are
-          shown separately.
-        </p>
+        <h2 className="font-semibold">{t("network.traffic.title")}</h2>
+        <p className="text-muted mt-1 text-sm">{t("network.traffic.description")}</p>
         {data.metrics.length === 0 ? (
-          <p className="text-muted mt-5 text-sm">
-            No native metrics sources have reported. Configure a supported DERP statistics endpoint
-            to enable this section.
-          </p>
+          <p className="text-muted mt-5 text-sm">{t("network.traffic.noSources")}</p>
         ) : (
           <div className="mt-5 grid gap-4 md:grid-cols-2">
             {data.metrics.map((metric) => (
               <div key={metric.id} className="border-line rounded-lg border p-4">
                 <h3 className="font-medium">{metric.name}</h3>
                 {metric.error ? (
-                  <p className="text-warn mt-2 text-sm">{metric.error}</p>
+                  <p className="text-warn mt-2 text-sm">{networkMessage(metric.error, locale)}</p>
                 ) : (
                   <>
                     <div className="mt-3 grid grid-cols-3 gap-3 text-sm">
                       <div>
-                        <p className="text-muted text-xs">Connections</p>
-                        {metric.connections ?? "Unknown"}
+                        <p className="text-muted text-xs">{t("network.traffic.connections")}</p>
+                        {metric.connections?.toLocaleString(locale) ?? t("network.state.unknown")}
                       </div>
                       <div>
-                        <p className="text-muted text-xs">Received</p>
-                        {bytes(metric.receivedBytes)}
+                        <p className="text-muted text-xs">{t("network.traffic.received")}</p>
+                        {bytes(metric.receivedBytes, locale)}
                       </div>
                       <div>
-                        <p className="text-muted text-xs">Sent</p>
-                        {bytes(metric.sentBytes)}
+                        <p className="text-muted text-xs">{t("network.traffic.sent")}</p>
+                        {bytes(metric.sentBytes, locale)}
                       </div>
                     </div>
                     <p className="text-muted mt-3 text-xs">
-                      Receive {rate(metric.rxBytesPerSecond)} · Send {rate(metric.txBytesPerSecond)}
+                      {t("network.traffic.rates", {
+                        receive: rate(metric.rxBytesPerSecond, locale),
+                        send: rate(metric.txBytesPerSecond, locale),
+                      })}
                     </p>
                   </>
                 )}
-                <p className="text-muted mt-2 text-xs">Observed {time(metric.observedAt)}</p>
+                <p className="text-muted mt-2 text-xs">
+                  {t("network.traffic.observed", { time: time(metric.observedAt, locale) })}
+                </p>
                 <TrafficHistory
                   records={data.history.filter(
                     (r) => r.kind === "relay" && r.entityId === metric.id,
@@ -327,6 +414,7 @@ export function Relays({ data }: { data: Data }) {
 }
 
 function TrafficHistory({ records }: { records: Data["history"] }) {
+  const { locale, t } = useI18n();
   const samples = [...records]
     .sort((a, b) => a.observedAt - b.observedAt || a.id - b.id)
     .map((record) => {
@@ -337,11 +425,7 @@ function TrafficHistory({ records }: { records: Data["history"] }) {
       };
     });
   if (samples.filter((sample) => sample.value !== null).length < 2)
-    return (
-      <p className="text-muted mt-3 text-xs">
-        Receive-rate history appears after two valid samples with history enabled.
-      </p>
-    );
+    return <p className="text-muted mt-3 text-xs">{t("network.traffic.waiting")}</p>;
   const peak = Math.max(...samples.map((s) => s.value ?? 0));
   const scale = peak || 1;
   const start = samples[0].at;
@@ -362,7 +446,10 @@ function TrafficHistory({ records }: { records: Data["history"] }) {
       <svg
         viewBox="0 0 300 52"
         role="img"
-        aria-label={`Received bytes per second, ${time(samples[0].at)} to ${time(samples[samples.length - 1].at)}`}
+        aria-label={t("network.traffic.chartLabel", {
+          start: time(samples[0].at, locale),
+          end: time(samples[samples.length - 1].at, locale),
+        })}
         className="text-accent h-14 w-full"
         preserveAspectRatio="none"
       >
@@ -383,28 +470,27 @@ function TrafficHistory({ records }: { records: Data["history"] }) {
           )}
       </svg>
       <figcaption className="text-muted text-xs">
-        Recorded receive rate · peak {rate(peak)}
+        {t("network.traffic.peak", { rate: rate(peak, locale) })}
       </figcaption>
     </figure>
   );
 }
 
 export function History({ data }: { data: Data }) {
+  const { locale, t } = useI18n();
   const events = data.history.filter((record) => record.kind !== "relay");
   return (
     <section className="border-line rounded-lg border p-5">
-      <h2 className="font-semibold">Observation and operation history</h2>
-      <p className="text-muted mt-1 text-sm">
-        Observed state changes and operations made in this dashboard. Polling can miss brief
-        changes; this is not a complete traffic or audit log.
-      </p>
+      <h2 className="font-semibold">{t("network.history.title")}</h2>
+      <p className="text-muted mt-1 text-sm">{t("network.history.description")}</p>
       {!data.historyEnabled ? (
         <Callout className="mt-5">
-          {data.historyReason ??
-            "History is disabled. Enable it explicitly to retain observations with a bounded retention period."}
+          {data.historyReason
+            ? networkMessage(data.historyReason, locale)
+            : t("network.history.disabled")}
         </Callout>
       ) : events.length === 0 ? (
-        <p className="text-muted mt-5 text-sm">No events recorded yet.</p>
+        <p className="text-muted mt-5 text-sm">{t("network.history.empty")}</p>
       ) : (
         <ol className="mt-5 space-y-4">
           {events.map((event) => (
@@ -414,43 +500,70 @@ export function History({ data }: { data: Data }) {
             >
               <Clock className="text-muted mt-1 size-4 shrink-0" />
               <div className="min-w-0 flex-1">
-                <p className="font-medium">
+                <p
+                  className="font-medium"
+                  title={
+                    event.kind === "action" && event.payload.intent
+                      ? String(event.payload.intent)
+                      : undefined
+                  }
+                >
                   {event.kind === "action"
                     ? event.payload.intent
-                      ? String(event.payload.intent)
-                      : "Relay selection"
+                      ? operationIntent(String(event.payload.intent), locale)
+                      : t("network.relay.title")
                     : String(event.payload.name ?? event.entityId)}
                 </p>
                 {event.kind === "action" && Boolean(event.payload.intent) && (
-                  <p className="mt-1 break-all">{operationTarget(event, data.snapshot.nodes)}</p>
+                  <p className="mt-1 break-all">
+                    {operationTarget(event, data.snapshot.nodes, locale)}
+                  </p>
                 )}
                 <p className="text-muted mt-1">
                   {event.kind === "action"
-                    ? `${event.payload.intent ? String(event.payload.path ?? event.entityId) : `Region ${String(event.payload.region ?? "unknown")}`} · ${String(event.payload.outcome ?? "recorded")} · actor ${String(event.payload.actor ?? "unknown")}`
-                    : `${event.payload.online === true ? "Online" : event.payload.online === false ? "Offline" : "State recorded"} · Home relay ${String(event.payload.homeRegion ?? "not reported")}`}
+                    ? t("network.history.action", {
+                        target: event.payload.intent
+                          ? String(event.payload.path ?? event.entityId)
+                          : t("network.state.region", {
+                              id: String(event.payload.region ?? t("network.history.unknown")),
+                            }),
+                        outcome: operationOutcome(event.payload.outcome, locale),
+                        actor: String(event.payload.actor ?? t("network.history.unknown")),
+                      })
+                    : t("network.history.node", {
+                        state: t(
+                          event.payload.online === true
+                            ? "network.state.online"
+                            : event.payload.online === false
+                              ? "network.state.offline"
+                              : "network.state.recorded",
+                        ),
+                        region: String(
+                          event.payload.homeRegion ?? t("network.history.notReported"),
+                        ),
+                      })}
                 </p>
               </div>
               <time
                 className="text-muted shrink-0 text-xs"
                 dateTime={new Date(event.observedAt).toISOString()}
               >
-                {new Date(event.observedAt)
-                  .toISOString()
-                  .replace("T", " ")
-                  .replace(/\.\d{3}Z$/, " UTC")}
+                {new Intl.DateTimeFormat(locale, {
+                  dateStyle: "medium",
+                  timeStyle: "long",
+                  timeZone: "UTC",
+                }).format(event.observedAt)}
               </time>
             </li>
           ))}
         </ol>
       )}
-      <p className="text-muted mt-4 text-xs">
-        Showing recent retained records. Historical data starts when recording is enabled.
-      </p>
+      <p className="text-muted mt-4 text-xs">{t("network.history.retention")}</p>
     </section>
   );
 }
 
-function operationTarget(event: Data["history"][number], nodes: NetworkNode[]) {
+function operationTarget(event: Data["history"][number], nodes: NetworkNode[], locale: Locale) {
   const target =
     typeof event.payload.target === "string"
       ? event.payload.target
@@ -461,45 +574,129 @@ function operationTarget(event: Data["history"][number], nodes: NetworkNode[]) {
   const path = String(event.payload.path ?? "");
   if (/\/machines(?:\/|$)/.test(path)) {
     const name = nodes.find((node) => node.id === target)?.name;
-    return name ? `${name} (Device ${target})` : `Device ${target}`;
+    return name
+      ? translate(locale, "network.history.namedDevice", { name, id: target })
+      : translate(locale, "network.history.device", { id: target });
   }
-  return `${/\/users(?:\/|$)/.test(path) ? "User" : "Target"} ${target}`;
+  return translate(
+    locale,
+    /\/users(?:\/|$)/.test(path) ? "network.history.user" : "network.history.target",
+    { id: target },
+  );
 }
 
 function Stat({ label, value, note }: { label: string; value: number; note: string }) {
+  const { locale } = useI18n();
   return (
     <div className="border-line rounded-lg border p-4">
       <p className="text-muted text-xs font-medium">{label}</p>
-      <p className="my-2 text-3xl font-semibold tabular-nums">{value}</p>
+      <p className="my-2 text-3xl font-semibold tabular-nums">{value.toLocaleString(locale)}</p>
       <p className="text-muted text-xs">{note}</p>
     </div>
   );
 }
 function Dot({ online }: { online: boolean }) {
+  const { t } = useI18n();
   return (
     <span
-      aria-label={online ? "Online" : "Offline"}
+      aria-label={t(online ? "network.state.online" : "network.state.offline")}
       className={cn("mr-2 inline-block size-2 rounded-full", online ? "bg-ok" : "bg-muted")}
     />
   );
 }
-function bool(value: boolean | null) {
-  return value === null ? "Unknown" : value ? "Yes" : "No";
+function bool(value: boolean | null, locale: Locale) {
+  return translate(
+    locale,
+    value === null ? "network.state.unknown" : value ? "network.state.yes" : "network.state.no",
+  );
 }
-export function time(value: number | null) {
-  return value === null ? "Not available" : `${new Date(value).toISOString().slice(11, 19)} UTC`;
+export function time(value: number | null, locale: Locale = "en") {
+  return value === null
+    ? translate(locale, "network.state.notAvailable")
+    : `${new Intl.DateTimeFormat(locale, {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hourCycle: "h23",
+        timeZone: "UTC",
+      }).format(value)} UTC`;
 }
-function bytes(value: number | null) {
-  if (value === null) return "Unknown";
+function bytes(value: number | null, locale: Locale) {
+  if (value === null) return translate(locale, "network.state.unknown");
   const units = ["B", "KiB", "MiB", "GiB", "TiB"];
   let index = 0;
   while (value >= 1024 && index < units.length - 1) {
     value /= 1024;
     index++;
   }
-  return `${value.toFixed(index ? 1 : 0)} ${units[index]}`;
+  return `${value.toLocaleString(locale, { minimumFractionDigits: index ? 1 : 0, maximumFractionDigits: index ? 1 : 0 })} ${units[index]}`;
 }
-function rate(value: number | null) {
-  if (value !== null && value > 0 && value < 1) return `${Number(value.toPrecision(3))} B/s`;
-  return value === null ? "Unknown" : `${bytes(value)}/s`;
+function rate(value: number | null, locale: Locale) {
+  if (value !== null && value > 0 && value < 1)
+    return `${value.toLocaleString(locale, { maximumSignificantDigits: 3 })} B/s`;
+  return value === null ? translate(locale, "network.state.unknown") : `${bytes(value, locale)}/s`;
+}
+
+function regionName(id: number, name: string, regions: Data["relay"]["regions"], locale: Locale) {
+  // Only localize synthesized fallback names; catalog names are operator data.
+  return name !== `Region ${id}` || regions.some((region) => region.id === id)
+    ? name
+    : translate(locale, "network.state.region", { id });
+}
+
+function operationIntent(intent: string, locale: Locale) {
+  const key = `network.history.intent.${intent}`;
+  return Object.hasOwn(en, key) ? translate(locale, key as keyof typeof en) : intent;
+}
+
+function operationOutcome(value: unknown, locale: Locale) {
+  const outcome = String(value ?? "recorded");
+  switch (outcome) {
+    case "saved":
+      return translate(locale, "network.history.saved");
+    case "success":
+      return translate(locale, "network.history.success");
+    case "failed":
+      return translate(locale, "network.history.failed");
+    case "recorded":
+      return translate(locale, "network.history.recorded");
+    default:
+      return outcome;
+  }
+}
+
+// Server diagnostics keep their existing wire values. Recognize only owned,
+// exact messages (or bounded templates); leave unknown diagnostics verbatim.
+const diagnosticKeys = new Map<string, keyof typeof en>(
+  (Object.keys(en) as (keyof typeof en)[])
+    .filter(
+      (key) =>
+        (key.startsWith("network.error.") || key === "network.relay.saveSuccess") &&
+        !en[key].includes("{"),
+    )
+    .map((key) => [en[key], key]),
+);
+
+export function networkMessage(message: string, locale: Locale): string {
+  const key = diagnosticKeys.get(message);
+  if (key) return translate(locale, key);
+  const http = /^Metrics endpoint returned HTTP ([1-5]\d{2})\.$/.exec(message);
+  if (http) return translate(locale, "network.error.metricsHttp", { status: http[1] });
+  const files = [
+    ["relay catalog", "network.file.catalog"],
+    ["selected relay map", "network.file.selectedMap"],
+    ["Headscale configuration", "network.file.headscale"],
+  ] as const;
+  for (const [file, fileKey] of files) {
+    for (const template of [
+      "network.error.invalidMap",
+      "network.error.fileSize",
+      "network.error.readFile",
+    ] as const) {
+      if (message === en[template].replace("{file}", file)) {
+        return translate(locale, template, { file: translate(locale, fileKey) });
+      }
+    }
+  }
+  return message;
 }

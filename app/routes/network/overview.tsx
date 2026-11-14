@@ -7,6 +7,7 @@ import Button from "~/components/button";
 import Callout from "~/components/callout";
 import PageError from "~/components/page-error";
 import PageHeader from "~/components/page-header";
+import { useI18n } from "~/i18n/react";
 import { appConfigContext, authContext, networkContext, requestApiContext } from "~/server/context";
 import { ActionError, createAction } from "~/server/web/actions";
 import { isUserPrincipal } from "~/server/web/auth";
@@ -15,7 +16,7 @@ import cn from "~/utils/cn";
 import { ok } from "~/utils/form";
 
 import type { Route } from "./+types/overview";
-import { History, Overview, Relays, time } from "./panels";
+import { History, networkMessage, Overview, Relays, time } from "./panels";
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const auth = context.get(authContext);
@@ -65,12 +66,13 @@ export const action = createAction({
 });
 
 const views = [
-  { id: "overview", label: "Overview", icon: Globe },
-  { id: "relays", label: "Relays", icon: Server },
-  { id: "activity", label: "Activity", icon: Activity },
+  { id: "overview", label: "network.page.overview", icon: Globe },
+  { id: "relays", label: "network.page.relays", icon: Server },
+  { id: "activity", label: "network.page.activity", icon: Activity },
 ] as const;
 
 export default function NetworkPage({ loaderData: data }: Route.ComponentProps) {
+  const { locale, t } = useI18n();
   const [search, setSearch] = useSearchParams();
   const view = views.find((item) => item.id === search.get("view"))?.id ?? "overview";
   const revalidator = useRevalidator();
@@ -88,12 +90,12 @@ export default function NetworkPage({ loaderData: data }: Route.ComponentProps) 
   return (
     <>
       <PageHeader
-        title="Network"
-        description="Devices, reported relay preferences, and observations from your control plane."
+        title={t("network.page.title")}
+        description={t("network.page.description")}
         actions={
           <Button onClick={() => void revalidate()} pending={revalidator.state !== "idle"}>
             <RefreshCw className="size-3.5" />
-            Refresh
+            {t("network.page.refresh")}
           </Button>
         }
       />
@@ -110,16 +112,16 @@ export default function NetworkPage({ loaderData: data }: Route.ComponentProps) 
             onClick={() => setSearch(id === "overview" ? {} : { view: id })}
           >
             <Icon className="size-4" />
-            {label}
+            {t(label)}
           </button>
         ))}
         <span className="text-muted ml-auto py-3 text-xs">
-          Control data refreshed {time(data.observedAt)}
+          {t("network.page.refreshed", { time: time(data.observedAt, locale) })}
         </span>
       </div>
       {data.collectionError && (
         <Callout className="mb-4" variant="warning">
-          {data.collectionError}
+          {networkMessage(data.collectionError, locale)}
         </Callout>
       )}
       {view === "overview" && <Overview data={data} />}
@@ -130,5 +132,6 @@ export default function NetworkPage({ loaderData: data }: Route.ComponentProps) 
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  return <PageError error={error} page="Network" />;
+  const { t } = useI18n();
+  return <PageError error={error} page={t("network.page.title")} />;
 }
