@@ -98,6 +98,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     return {
       access: {
         dns: auth.can(principal, Capabilities.read_network),
+        network: auth.can(principal, Capabilities.read_network),
         machines: auth.can(principal, Capabilities.read_machines),
         policy: auth.can(principal, Capabilities.read_policy),
         settings: auth.can(principal, Capabilities.read_feature),

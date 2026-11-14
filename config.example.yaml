@@ -1,4 +1,23 @@
 # Configuration for the Headplane server and web application
+# Optional network observations and relay selection. Disabled unless configured.
+# The Network page itself can read existing node information without this block.
+# See /features/network for required Headscale preparation and data boundaries.
+# network:
+#   poll_interval: 30000
+#   history:
+#     enabled: false
+#     retention_days: 7
+#     max_rows: 10000
+#   relays:
+#     catalog_path: /etc/headplane/derp-catalog.json
+#     map_path: /etc/headplane/selected-derp.yaml
+#     headscale_path: /etc/headscale/selected-derp.yaml
+#   metrics:
+#     - id: primary
+#       name: Primary relay
+#       region_id: 901
+#       url: http://127.0.0.1:9091/debug/vars
+
 server:
   # These are the default values, change them as needed
   host: "0.0.0.0"

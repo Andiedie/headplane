@@ -241,12 +241,68 @@ export const partialIntegrationConfig = type({
   agent: partialAgentConfig.optional(),
 }).partial();
 
+// Network observations are opt-in; existing configurations keep their behavior.
+const metricsUrl = type("string.url").narrow((value, ctx) => {
+  const url = new URL(value);
+  return (
+    ((url.protocol === "http:" || url.protocol === "https:") &&
+      !url.username &&
+      !url.password &&
+      !url.hash) ||
+    ctx.mustBe("an HTTP(S) URL without credentials or a fragment")
+  );
+});
+const metricsSources = type({
+  id: /^[a-z0-9][a-z0-9_-]{0,63}$/,
+  name: "string > 0",
+  url: metricsUrl,
+  region_id: "number.integer > 0?",
+})
+  .array()
+  .atMostLength(16);
+
+const networkConfig = type({
+  poll_interval: "1000 <= number.integer <= 3600000 = 30000",
+  "history?": {
+    enabled: "boolean = false",
+    retention_days: "1 <= number.integer <= 90 = 7",
+    max_rows: "100 <= number.integer <= 100000 = 10000",
+  },
+  "relays?": {
+    catalog_path: "string > 0",
+    map_path: "string > 0",
+    headscale_path: "string > 0?",
+  },
+  "metrics?": metricsSources.narrow(
+    (sources, ctx) =>
+      new Set(sources.map((source) => source.id)).size === sources.length ||
+      ctx.mustBe("an array of metrics sources with unique IDs"),
+  ),
+});
+
+// File and environment fragments must not inject defaults before they are merged.
+const partialNetworkConfig = type({
+  poll_interval: "1000 <= number.integer <= 3600000?",
+  "history?": {
+    enabled: "boolean?",
+    retention_days: "1 <= number.integer <= 90?",
+    max_rows: "100 <= number.integer <= 100000?",
+  },
+  "relays?": {
+    catalog_path: "string > 0?",
+    map_path: "string > 0?",
+    headscale_path: "string > 0?",
+  },
+  "metrics?": metricsSources,
+});
+
 export const headplaneConfig = type({
   debug: "boolean = false",
   server: serverConfig,
   headscale: headscaleConfig,
   oidc: oidcConfig.optional(),
   integration: integrationConfig.optional(),
+  network: networkConfig.optional(),
 }).onDeepUndeclaredKey("delete");
 
 export const partialHeadplaneConfig = type({
@@ -255,6 +311,7 @@ export const partialHeadplaneConfig = type({
   headscale: partialHeadscaleConfig.optional(),
   oidc: partialOidcConfig.optional(),
   integration: partialIntegrationConfig.optional(),
+  network: partialNetworkConfig.optional(),
 });
 
 export type HeadplaneConfig = typeof headplaneConfig.infer;

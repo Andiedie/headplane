@@ -73,6 +73,7 @@ export const machineAction = createAction({
     },
     rename: {
       fields: { node_id: nodeId, name: machineName },
+      auditTarget: "node_id",
       async handler(input, { api, requireNode, refresh }) {
         const node = await requireNode(input.node_id);
         await api.nodes.rename(node.id, input.name);
@@ -82,6 +83,7 @@ export const machineAction = createAction({
     },
     delete: {
       fields: { node_id: nodeId },
+      auditTarget: "node_id",
       async handler(input, { api, requireNode, refresh }) {
         const node = await requireNode(input.node_id);
         await api.nodes.delete(node.id);
@@ -91,6 +93,7 @@ export const machineAction = createAction({
     },
     expire: {
       fields: { node_id: nodeId },
+      auditTarget: "node_id",
       async handler(input, { api, requireNode, refresh }) {
         const node = await requireNode(input.node_id);
         await api.nodes.expire(node.id);
@@ -100,6 +103,7 @@ export const machineAction = createAction({
     },
     toggle_expiry: {
       fields: { node_id: nodeId, disable_expiry: toggle },
+      auditTarget: "node_id",
       async handler(input, { api, capabilities, requireNode, refresh }) {
         const node = await requireNode(input.node_id);
         const disableExpiry = input.disable_expiry === "true";
@@ -116,6 +120,7 @@ export const machineAction = createAction({
     },
     update_tags: {
       fields: { node_id: nodeId, tags: list() },
+      auditTarget: "node_id",
       async handler(input, { api, requireNode, refresh }) {
         const node = await requireNode(input.node_id);
         const tags = input.tags.map((tag) => tag.trim()).filter((tag) => tag !== "");
@@ -126,6 +131,7 @@ export const machineAction = createAction({
     },
     update_routes: {
       fields: { node_id: nodeId, routes: list(), enabled: toggle },
+      auditTarget: "node_id",
       async handler(input, { api, requireNode, refresh }) {
         const node = await requireNode(input.node_id);
         const routes = input.routes.map((route) => route.trim()).filter((route) => route !== "");
@@ -144,6 +150,7 @@ export const machineAction = createAction({
         node_id: nodeId,
         user_id: v.pipe(v.string(), v.minLength(1, "Choose an owner.")),
       },
+      auditTarget: "node_id",
       async handler(input, { api, requireNode, refresh }) {
         const node = await requireNode(input.node_id);
         if (!api.nodes.reassignUser) {

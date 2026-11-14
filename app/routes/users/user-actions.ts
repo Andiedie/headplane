@@ -53,6 +53,7 @@ export const userAction = createAction({
     },
     delete: {
       fields: { headscale_user_id: id },
+      auditTarget: "headscale_user_id",
       async handler(input, { api, auth, refresh }) {
         await api.users.delete(input.headscale_user_id);
         for (const user of await auth.listUsers()) {
@@ -67,6 +68,7 @@ export const userAction = createAction({
     },
     rename: {
       fields: { headscale_user_id: id, name: username },
+      auditTarget: "headscale_user_id",
       async handler(input, { api, refresh }) {
         const users = await api.users.list({ id: input.headscale_user_id });
         const user = users.find((user) => user.id === input.headscale_user_id);
@@ -86,6 +88,7 @@ export const userAction = createAction({
     },
     reassign: {
       fields: { headplane_user_id: id, role: v.picklist(assignableRoles, "Choose a role.") },
+      auditTarget: "headplane_user_id",
       async handler(input, { auth }) {
         const user = await requireHeadplaneUser(auth, input.headplane_user_id);
         if (user.role === "owner") {
@@ -101,6 +104,7 @@ export const userAction = createAction({
     },
     transfer: {
       fields: { headplane_user_id: id },
+      auditTarget: "headplane_user_id",
       async handler(input, { auth, principal }) {
         if (!isUserPrincipal(principal) || principal.user.role !== "owner") {
           throw new ActionError("Only the owner can transfer ownership.", 403);
@@ -123,6 +127,7 @@ export const userAction = createAction({
         headplane_user_id: id,
         headscale_user_id: v.pipe(v.string(), v.minLength(1, "Choose a Headscale user.")),
       },
+      auditTarget: "headplane_user_id",
       async handler(input, { api, auth }) {
         const user = await requireHeadplaneUser(auth, input.headplane_user_id);
         const [headscaleUser] = await api.users.list({ id: input.headscale_user_id });

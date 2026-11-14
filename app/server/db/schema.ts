@@ -1,4 +1,4 @@
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 import { HostInfo } from "~/types";
 
@@ -43,3 +43,23 @@ export const authSessions = sqliteTable("auth_sessions", {
 
 export type AuthSessionRecord = typeof authSessions.$inferSelect;
 export type AuthSessionInsert = typeof authSessions.$inferInsert;
+
+export const networkHistory = sqliteTable(
+  "network_history",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    kind: text("kind", { enum: ["node", "relay", "action"] }).notNull(),
+    entity_id: text("entity_id").notNull(),
+    observed_at: integer("observed_at").notNull(), // Unix milliseconds
+    payload: text("payload", { mode: "json" }).$type<Record<string, unknown>>().notNull(),
+  },
+  (table) => [
+    index("network_history_observed_at_idx").on(table.observed_at, table.id),
+    index("network_history_entity_idx").on(
+      table.kind,
+      table.entity_id,
+      table.observed_at,
+      table.id,
+    ),
+  ],
+);

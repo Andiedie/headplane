@@ -12,6 +12,7 @@ import { createHeadscale, type HeadscaleClient } from "./headscale/api";
 import { loadHeadscaleConfig } from "./headscale/config-loader";
 import { createLiveStore, nodesResource, usersResource } from "./headscale/live-store";
 import { type AgentManager, createAgentManager } from "./hp-agent";
+import { createNetworkService } from "./network/service";
 import { createOidcService, type OidcService } from "./oidc/provider";
 import { createAuthService, type Principal } from "./web/auth";
 
@@ -27,6 +28,10 @@ export const headscaleLiveStoreContext = createContext<AppContext["hsLive"]>();
 export const integrationContext = createContext<AppContext["integration"]>();
 export const oidcContext = createContext<AppContext["oidc"]>();
 export const requestApiContext = createContext<AppContext["apiForRequest"]>();
+export const networkContext = createContext<AppContext["network"]>();
+export const actionAuditContext = createContext<AppContext["network"]["recordAction"] | undefined>(
+  undefined,
+);
 
 export async function createAppContext(config: HeadplaneConfig) {
   const db = await createDbClient(join(config.server.data_path, "hp_persist.db"));
@@ -77,10 +82,17 @@ export async function createAppContext(config: HeadplaneConfig) {
   );
 
   const integration = await loadIntegration(config.integration);
+  const network = createNetworkService({
+    config,
+    api: headscaleApiKey ? headscale.client(headscaleApiKey) : undefined,
+    agents,
+    db,
+  });
   const disposers: Array<() => Promise<void> | void> = [
     () => auth.stop(),
     () => hsLive.dispose(),
     () => headscale.dispose(),
+    () => network.dispose(),
   ];
 
   if (agents.state === "enabled") {
@@ -97,6 +109,7 @@ export async function createAppContext(config: HeadplaneConfig) {
 
   function startServices() {
     auth.start();
+    network.start();
   }
 
   async function dispose() {
@@ -120,6 +133,7 @@ export async function createAppContext(config: HeadplaneConfig) {
     hsLive,
     hs,
     integration,
+    network,
     apiForRequest,
     startServices,
     dispose,
@@ -139,6 +153,8 @@ export function createRouterContext(ctx: AppContext) {
   context.set(integrationContext, ctx.integration);
   context.set(oidcContext, ctx.oidc);
   context.set(requestApiContext, ctx.apiForRequest);
+  context.set(networkContext, ctx.network);
+  context.set(actionAuditContext, ctx.network.recordAction);
   return context;
 }
 
