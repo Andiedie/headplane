@@ -1,8 +1,10 @@
 import type { ActionFunctionArgs } from "react-router";
 import * as v from "valibot";
 
+import { translate, type Locale, type MessageKey, type MessageValues } from "~/i18n";
+import { localizedHeadscaleErrorMessage, translateValidationErrors } from "~/i18n/action-errors";
+import { getLocale } from "~/i18n/locale.server";
 import { actionAuditContext, authContext } from "~/server/context";
-import { headscaleErrorMessage } from "~/server/headscale/api/error-client";
 import { isUserPrincipal, type Principal } from "~/server/web/auth";
 import type { Capabilities } from "~/server/web/roles";
 import { type ActionResult, formValues, invalid, parseValues } from "~/utils/form";
@@ -12,6 +14,7 @@ export class ActionError extends Error {
   constructor(
     message: string,
     readonly status = 400,
+    readonly localization?: { key: MessageKey; values?: MessageValues },
   ) {
     super(message);
   }
@@ -23,7 +26,11 @@ interface Intent<E extends v.ObjectEntries, C> {
   fields: E;
   auditTarget?: keyof E & ("node_id" | "headplane_user_id" | "headscale_user_id");
   capability?: Capabilities;
-  handler: (input: v.InferOutput<v.ObjectSchema<E, undefined>>, ctx: C) => Promise<HandlerResult>;
+  handler: (
+    input: v.InferOutput<v.ObjectSchema<E, undefined>>,
+    ctx: C,
+    locale: Locale,
+  ) => Promise<HandlerResult>;
 }
 
 interface ActionOptions<C, T extends Record<string, v.ObjectEntries>> {
@@ -39,6 +46,7 @@ export function createAction<
 >(options: ActionOptions<C, T>) {
   const action = async (args: ActionFunctionArgs) => {
     const auth = args.context.get(authContext);
+    const locale = await getLocale(args.request);
 
     try {
       const ctx = await options.setup(args);
@@ -46,19 +54,21 @@ export function createAction<
       const name = String(values.intent ?? "");
 
       if (!Object.hasOwn(options.intents, name)) {
-        return invalid({ form: "This action isn't supported." });
+        return invalid({ form: translate(locale, "errors.unsupportedAction") });
       }
 
       const intent = options.intents[name];
       for (const capability of [options.capability, intent.capability]) {
         if (capability !== undefined && !auth.can(ctx.principal, capability)) {
-          throw new ActionError("You don't have permission to do this.", 403);
+          throw new ActionError("You don't have permission to do this.", 403, {
+            key: "errors.permissionDenied",
+          });
         }
       }
 
       const parsed = parseValues(v.object(intent.fields), values);
       if (!parsed.ok) {
-        return invalid(parsed.errors);
+        return invalid(translateValidationErrors(locale, parsed.errors));
       }
 
       const audit = async (outcome: "success" | "failed") => {
@@ -82,7 +92,7 @@ export function createAction<
         });
       };
       try {
-        const result = await intent.handler(parsed.data, ctx);
+        const result = await intent.handler(parsed.data, ctx, locale);
         const failed =
           result instanceof Response
             ? result.status >= 400
@@ -97,10 +107,13 @@ export function createAction<
       }
     } catch (error) {
       if (error instanceof ActionError) {
-        return invalid({ form: error.message }, error.status);
+        const message = error.localization
+          ? translate(locale, error.localization.key, error.localization.values)
+          : error.message;
+        return invalid({ form: message }, error.status);
       }
 
-      const message = headscaleErrorMessage(error);
+      const message = localizedHeadscaleErrorMessage(error, locale);
       if (message) {
         return invalid({ form: message });
       }

@@ -8,9 +8,11 @@ import {
 } from "react-router";
 
 import Avatar from "~/components/avatar";
+import LanguageSwitcher from "~/components/language-switcher";
 import Link from "~/components/link";
 import LogoMark from "~/components/logo-mark";
 import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from "~/components/menu";
+import { useI18n } from "~/i18n/react";
 import cn from "~/utils/cn";
 import type { ColorScheme } from "~/utils/color-scheme";
 
@@ -35,18 +37,18 @@ export interface HeaderProps {
 }
 
 const tabs = [
-  { to: "/machines", label: "Machines", key: "machines" },
-  { to: "/network", label: "Network", key: "network" },
-  { to: "/users", label: "Users", key: "users" },
-  { to: "/acls", label: "Access controls", key: "policy" },
-  { to: "/dns", label: "DNS", key: "dns" },
-  { to: "/settings", label: "Settings", key: "settings" },
+  { to: "/machines", label: "common.machines", key: "machines" },
+  { to: "/network", label: "common.network", key: "network" },
+  { to: "/users", label: "common.users", key: "users" },
+  { to: "/acls", label: "common.accessControls", key: "policy" },
+  { to: "/dns", label: "common.dns", key: "dns" },
+  { to: "/settings", label: "common.settings", key: "settings" },
 ] as const;
 
 const colorSchemes = [
-  { value: "system", label: "System", icon: Monitor },
-  { value: "light", label: "Light", icon: Sun },
-  { value: "dark", label: "Dark", icon: Moon },
+  { value: "system", label: "common.system", icon: Monitor },
+  { value: "light", label: "common.light", icon: Sun },
+  { value: "dark", label: "common.dark", icon: Moon },
 ] as const satisfies ReadonlyArray<{
   value: ColorScheme;
   label: string;
@@ -54,6 +56,7 @@ const colorSchemes = [
 }>;
 
 export default function Header({ user, access, configAvailable }: HeaderProps) {
+  const { t } = useI18n();
   const submit = useSubmit();
   const navigate = useNavigate();
   const showTabs = access.ui;
@@ -90,7 +93,7 @@ export default function Header({ user, access, configAvailable }: HeaderProps) {
                 prefetch="intent"
                 to={tab.to}
               >
-                {tab.label}
+                {t(tab.label)}
               </NavLink>
             ))}
           </nav>
@@ -99,7 +102,7 @@ export default function Header({ user, access, configAvailable }: HeaderProps) {
           {showTabs && (
             <Menu>
               <MenuTrigger className="text-muted hover:bg-hover hover:text-fg size-8 rounded-md md:hidden">
-                <MenuIcon aria-label="Navigation" className="size-4" />
+                <MenuIcon aria-label={t("common.navigation")} className="size-4" />
               </MenuTrigger>
               <MenuContent align="end">
                 {visibleTabs.map((tab) => (
@@ -109,7 +112,7 @@ export default function Header({ user, access, configAvailable }: HeaderProps) {
                         location.pathname.startsWith(tab.to) && "text-accent font-medium",
                       )}
                     >
-                      {tab.label}
+                      {t(tab.label)}
                     </span>
                   </MenuItem>
                 ))}
@@ -118,12 +121,12 @@ export default function Header({ user, access, configAvailable }: HeaderProps) {
           )}
           <Menu>
             <MenuTrigger className="text-muted hover:bg-hover hover:text-fg size-8 rounded-md">
-              <CircleQuestionMark aria-label="Help" className="size-4" />
+              <CircleQuestionMark aria-label={t("common.help")} className="size-4" />
             </MenuTrigger>
             <MenuContent align="end">
               <MenuItem>
                 <Link external to="https://headplane.net">
-                  Docs
+                  {t("common.docs")}
                 </Link>
               </MenuItem>
               <MenuItem>
@@ -133,11 +136,12 @@ export default function Header({ user, access, configAvailable }: HeaderProps) {
               </MenuItem>
               <MenuItem>
                 <Link external to="https://tailscale.com/download">
-                  Download
+                  {t("common.download")}
                 </Link>
               </MenuItem>
             </MenuContent>
           </Menu>
+          <LanguageSwitcher />
           <Menu>
             <MenuTrigger className="rounded-full">
               <Avatar name={user.name} src={user.picture} />
@@ -147,7 +151,7 @@ export default function Header({ user, access, configAvailable }: HeaderProps) {
                 <div className="text-fg">
                   {user.subject === "api_key" ? (
                     <>
-                      <p className="font-semibold">API Key</p>
+                      <p className="font-semibold">{t("common.apiKey")}</p>
                       <p>{user.name}</p>
                     </>
                   ) : (
@@ -171,7 +175,7 @@ export default function Header({ user, access, configAvailable }: HeaderProps) {
                 >
                   <div className="flex items-center gap-x-2">
                     <Icon className="size-4" />
-                    <span className="flex-1">{label}</span>
+                    <span className="flex-1">{t(label)}</span>
                     {currentColorScheme === value && <Check className="size-4" />}
                   </div>
                 </MenuItem>
@@ -181,7 +185,7 @@ export default function Header({ user, access, configAvailable }: HeaderProps) {
                 variant="danger"
                 onClick={() => submit({}, { action: "/logout", method: "POST" })}
               >
-                Logout
+                {t("common.logout")}
               </MenuItem>
             </MenuContent>
           </Menu>

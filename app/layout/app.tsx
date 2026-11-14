@@ -3,6 +3,7 @@ import { Outlet, redirect, type ShouldRevalidateFunction, useRouteLoaderData } f
 
 import Callout from "~/components/callout";
 import PageError from "~/components/page-error";
+import { useI18n } from "~/i18n/react";
 import {
   appConfigContext,
   authContext,
@@ -121,6 +122,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 }
 
 export default function AppLayout({ loaderData }: Route.ComponentProps) {
+  const { t } = useI18n();
   return (
     <>
       <Header
@@ -133,10 +135,10 @@ export default function AppLayout({ loaderData }: Route.ComponentProps) {
           <Callout
             className="mb-4"
             icon={<CloudOff />}
-            title="Can't reach Headscale"
+            title={t("common.headscaleUnavailable")}
             variant="error"
           >
-            Some data may be out of date, and changes won't save until it's back.
+            {t("common.headscaleUnavailableDetail")}
           </Callout>
         )}
         <Outlet />

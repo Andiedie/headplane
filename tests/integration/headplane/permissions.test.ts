@@ -20,6 +20,8 @@ const PUBLIC = new Set([
   "routes/util/healthz.ts",
   "routes/util/info.ts",
   "routes/util/color-scheme.ts",
+  "routes/util/locale.ts", // Only sets a display preference; returns no tailnet data.
+  "routes/not-found.tsx", // A localized 404 document; returns no tailnet data.
   "routes/util/redirect.ts",
   "routes/auth/login/page.tsx",
   "routes/auth/logout.ts",

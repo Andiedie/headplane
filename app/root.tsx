@@ -9,6 +9,8 @@ import {
   useHref,
 } from "react-router";
 
+import { getLocale } from "~/i18n/locale.server";
+import { I18nProvider } from "~/i18n/react";
 import { LiveDataProvider } from "~/utils/live-data";
 import ToastProvider from "~/utils/toast-provider";
 
@@ -29,7 +31,8 @@ export const meta: MetaFunction = () => [
 
 export async function loader({ request }: Route.LoaderArgs) {
   const colorScheme = await getColorScheme(request);
-  return { colorScheme };
+  const locale = await getLocale(request);
+  return { colorScheme, locale };
 }
 
 export function Layout({ children }: { readonly children: React.ReactNode }) {
@@ -41,33 +44,35 @@ export function Layout({ children }: { readonly children: React.ReactNode }) {
   // that control its state are usually open in portal containers which
   // are not a part of the normal React tree.
   return (
-    <LiveDataProvider>
-      <html
-        lang="en"
-        className={
-          loaderData?.colorScheme === "dark"
-            ? "dark"
-            : loaderData?.colorScheme === "light"
-              ? "light"
-              : ""
-        }
-      >
-        <head>
-          <meta charSet="utf-8" />
-          <meta content="width=device-width, initial-scale=1" name="viewport" />
-          <Meta />
-          <Links />
-          <link href={faviconIco} rel="icon" sizes="32x32" />
-          <link href={faviconSvg} rel="icon" type="image/svg+xml" />
-        </head>
-        <body className="w-full overflow-x-hidden overscroll-none">
-          {children}
-          <ToastProvider />
-          <ScrollRestoration />
-          <Scripts />
-        </body>
-      </html>
-    </LiveDataProvider>
+    <I18nProvider locale={loaderData?.locale ?? "en"}>
+      <LiveDataProvider>
+        <html
+          lang={loaderData?.locale ?? "en"}
+          className={
+            loaderData?.colorScheme === "dark"
+              ? "dark"
+              : loaderData?.colorScheme === "light"
+                ? "light"
+                : ""
+          }
+        >
+          <head>
+            <meta charSet="utf-8" />
+            <meta content="width=device-width, initial-scale=1" name="viewport" />
+            <Meta />
+            <Links />
+            <link href={faviconIco} rel="icon" sizes="32x32" />
+            <link href={faviconSvg} rel="icon" type="image/svg+xml" />
+          </head>
+          <body className="w-full overflow-x-hidden overscroll-none">
+            {children}
+            <ToastProvider />
+            <ScrollRestoration />
+            <Scripts />
+          </body>
+        </html>
+      </LiveDataProvider>
+    </I18nProvider>
   );
 }
 

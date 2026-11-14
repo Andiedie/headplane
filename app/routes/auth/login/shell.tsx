@@ -1,8 +1,10 @@
 import type React from "react";
 import { Form } from "react-router";
 
+import LanguageSwitcher from "~/components/language-switcher";
 import Link from "~/components/link";
 import LogoMark from "~/components/logo-mark";
+import { Trans, useI18n } from "~/i18n/react";
 import cn from "~/utils/cn";
 
 import Grid from "./grid";
@@ -15,14 +17,16 @@ interface Props {
 }
 
 export default function Shell({ title, description, isWide, children }: Props) {
+  const { t } = useI18n();
   return (
     <div className="flex min-h-dvh">
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="p-6 sm:p-8">
+        <header className="flex items-center justify-between p-6 sm:p-8">
           <span className="flex items-center gap-2 text-sm font-semibold tracking-tight">
             <LogoMark className="size-5" />
             headplane
           </span>
+          <LanguageSwitcher />
         </header>
         <main className="flex flex-1 items-center justify-center px-6 py-6 sm:px-8">
           <div className={cn("w-full", isWide ? "max-w-md" : "max-w-sm")}>
@@ -32,10 +36,10 @@ export default function Shell({ title, description, isWide, children }: Props) {
           </div>
         </main>
         <footer className="text-muted flex flex-wrap items-center justify-between gap-2 p-6 text-xs sm:p-8">
-          <p>The web interface for Headscale.</p>
+          <p>{t("common.tagline")}</p>
           <span className="flex gap-3">
             <Link className="hover:text-fg" external to="https://headplane.net">
-              Docs
+              {t("common.docs")}
             </Link>
             <Link className="hover:text-fg" external to="https://github.com/tale/headplane">
               GitHub
@@ -54,15 +58,16 @@ export default function Shell({ title, description, isWide, children }: Props) {
 }
 
 export function SignedIn({ name }: { name: string }) {
+  const { t } = useI18n();
   return (
     <Form
       action="/logout"
       className="border-line text-muted mt-6 border-t pt-6 text-sm"
       method="POST"
     >
-      Signed in as <span className="text-fg">{name}</span>.{" "}
+      <Trans id="common.signedInAs" values={{ name: <span className="text-fg">{name}</span> }} />{" "}
       <button className="text-accent focus-ring rounded-sm" type="submit">
-        Sign out
+        {t("common.signOut")}
       </button>
     </Form>
   );

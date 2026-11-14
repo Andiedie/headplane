@@ -2,11 +2,13 @@ import { Link as RouterLink } from "react-router";
 
 import Button from "~/components/button";
 import { ErrorDetails, ReportLink } from "~/components/page-error";
+import { useI18n } from "~/i18n/react";
 import Shell from "~/routes/auth/login/shell";
 import { describeError } from "~/utils/describe-error";
 
 export default function ErrorPage({ error }: { error: unknown }) {
-  const info = describeError(error);
+  const { locale, t } = useI18n();
+  const info = describeError(error, locale);
   const canRetry = info.kind !== "forbidden" && info.kind !== "not_found";
 
   return (
@@ -14,7 +16,7 @@ export default function ErrorPage({ error }: { error: unknown }) {
       <div className="flex flex-wrap items-center gap-3">
         {canRetry && (
           <Button onClick={() => window.location.reload()} variant="primary">
-            Try again
+            {t("components.errors.retry")}
           </Button>
         )}
         <Button
@@ -22,7 +24,7 @@ export default function ErrorPage({ error }: { error: unknown }) {
           render={<RouterLink reloadDocument to="/" />}
           variant={canRetry ? "secondary" : "primary"}
         >
-          Go to Headplane
+          {t("components.errors.goHome")}
         </Button>
         {info.kind === "unknown" && (
           <span className="ml-1 text-sm">
