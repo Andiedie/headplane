@@ -2,6 +2,8 @@
 
 ## Upgrading
 
+- Native installations must use Node.js 24.22.1 or newer in the supported Node 24 line and Go 1.27.3 or newer, then rebuild the agent, to retain upstream 0.8.2 certificate-security fixes.
+
 - DNS records are only read from and written to the file in Headscale's `dns.extra_records_path`. Records listed inline under `dns.extra_records` show as read-only, so move them into the file to keep editing them.
 - The `proc` and `kubernetes` integrations now restart Headscale instead of reloading it, so Headscale needs a supervisor that brings it back: systemd with `Restart=always`, which Headscale's own unit and the NixOS module already set, or the kubelet.
 - Enabling more than one integration now turns them all off, with an error in the log. Keep one.
@@ -40,6 +42,7 @@
 
 ## Fixes
 
+- Container builds retain upstream 0.8.2 certificate-security and dependency updates, including the patched Go toolchain, CA certificates, and ip-address dependency.
 - Saving from the Rules or Tags & Groups tabs no longer drops the comma from text like `,}` or `,]` inside a policy value.
 - Live updates work again right after signing in. Previously the machines list and other pages only refreshed on their own after a full page reload.
 - Changes to DNS settings and sign-in restrictions now actually apply with the `proc` and `kubernetes` integrations. Both sent `SIGHUP`, which only makes Headscale reload its ACL policy. They now stop Headscale with `SIGTERM` and wait for systemd or Kubernetes to restart it, so Headscale needs a supervisor that restarts it.
