@@ -42,6 +42,7 @@
 
 ## Fixes
 
+- Relay selection works behind HTTPS reverse proxies that preserve the public host and port.
 - Container builds retain upstream 0.8.2 certificate-security and dependency updates, including the patched Go toolchain, CA certificates, and ip-address dependency.
 - Saving from the Rules or Tags & Groups tabs no longer drops the comma from text like `,}` or `,]` inside a policy value.
 - Live updates work again right after signing in. Previously the machines list and other pages only refreshed on their own after a full page reload.

@@ -258,6 +258,37 @@ describe("network overview", () => {
     ]);
   });
 
+  test("accepts a runtime-aligned origin only on the configured public host and port", async () => {
+    await using tailnet = await createTailnet();
+    const app = await tailnet.headplane({
+      config: {
+        server: { base_url: "https://headplane.test/admin" },
+        network: { history: { enabled: true } },
+      },
+    });
+    const owner = await app.signIn("owner");
+    // The HTTP runtime aligns the public HTTPS Origin with its HTTP transport.
+    for (const [origin, status] of [
+      ["http://headplane.test", 400],
+      ["http://headplane.test:8080", 403],
+      ["http://evil.example", 403],
+    ] as const) {
+      expect(
+        statusOf(
+          await app.call(action, "/network", {
+            as: owner.cookie,
+            headers: { Origin: origin },
+            form: { intent: "select-relay", region: "901", revision: "old" },
+          }),
+        ),
+      ).toBe(status);
+    }
+    const current = await app.ctx.network.read(app.api);
+    expect(current.history.filter((event) => event.kind === "action")).toMatchObject([
+      { payload: { actor: owner.userId, region: 901, outcome: "failed" } },
+    ]);
+  });
+
   test("falls back to the request origin only when no canonical URL is configured", async () => {
     await using tailnet = await createTailnet();
     const app = await tailnet.headplane();

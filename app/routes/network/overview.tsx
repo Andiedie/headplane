@@ -36,8 +36,11 @@ export const action = createAction({
     const origin = request.headers.get("Origin");
     // TLS may terminate before this server. Only configured URLs are trusted;
     // arbitrary forwarded headers must not authorize cross-origin writes.
-    const baseUrl = context.get(appConfigContext).server.base_url ?? request.url;
-    if (origin && origin !== new URL(baseUrl).origin) {
+    const requestUrl = new URL(request.url);
+    const publicUrl = new URL(context.get(appConfigContext).server.base_url ?? request.url);
+    // The HTTP runtime aligns same-host Origin schemes with its local transport.
+    const matchesAlignedOrigin = requestUrl.host === publicUrl.host && origin === requestUrl.origin;
+    if (origin && origin !== publicUrl.origin && !matchesAlignedOrigin) {
       throw new ActionError("The request must originate from this dashboard.", 403);
     }
     return { principal, network: context.get(networkContext) };
