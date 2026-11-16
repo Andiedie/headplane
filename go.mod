@@ -2,7 +2,7 @@ module github.com/tale/headplane
 
 go 1.27.1
 
-toolchain go1.27.3
+toolchain go1.27.4
 
 require (
 	go4.org/mem v0.0.0-20240501181205-ae6ca9944745

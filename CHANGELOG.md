@@ -42,6 +42,7 @@
 
 ## Fixes
 
+- The agent, container healthcheck, shell helper, and Browser SSH use Go 1.27.4, including its security fixes.
 - Relay selection works behind HTTPS reverse proxies that preserve the public host and port.
 - Container builds retain upstream 0.8.2 certificate-security and dependency updates, including the patched Go toolchain, CA certificates, and ip-address dependency.
 - Saving from the Rules or Tags & Groups tabs no longer drops the comma from text like `,}` or `,]` inside a policy value.

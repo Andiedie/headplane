@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM golang:1.27.3 AS go-base
+FROM --platform=$BUILDPLATFORM golang:1.27.4@sha256:fe517acaa580cc7915457080f850c37e618b3c1e750f98b58fc6429b605147a1 AS go-base
 WORKDIR /run
 RUN apt-get update && apt-get install -y --no-install-recommends patch && rm -rf /var/lib/apt/lists/*
 
@@ -27,7 +27,7 @@ RUN chmod +x /bin/hp_healthcheck
 # Folder needs to exist for later stages
 RUN mkdir -p /var/lib/headplane/agent
 
-FROM --platform=$BUILDPLATFORM node:24-slim AS js-base
+FROM --platform=$BUILDPLATFORM node:24-slim@sha256:dc26ae92c9fb15cf6b1d63e20f0944b2efe0f115b20e00be48fb23fceb061c54 AS js-base
 WORKDIR /run
 
 RUN corepack enable
@@ -42,7 +42,7 @@ COPY . .
 ARG HEADPLANE_VERSION
 RUN HEADPLANE_VERSION=$HEADPLANE_VERSION ./build.sh --app
 
-FROM gcr.io/distroless/nodejs24-debian13:latest AS final
+FROM gcr.io/distroless/nodejs24-debian13:latest@sha256:24bc0fe0225c7518f202a822587dad74fe143b96326b81fe5cc08c1df8bed03e AS final
 COPY --from=js-base /run/build /app/build
 COPY --from=js-base /run/drizzle /app/drizzle
 
@@ -65,7 +65,7 @@ ENV HEADPLANE_LISTEN_FILE=/tmp/headplane-listen
 WORKDIR /app
 CMD [ "/app/build/server/index.js" ]
 
-FROM node:24-alpine AS debug-shell
+FROM node:24-alpine@sha256:116b800c3754b440ee0aa3ed2f20f5bf3d99a554bfd9adeea09ea8017f6e85f5 AS debug-shell
 RUN apk add --no-cache bash curl ca-certificates
 
 COPY --from=js-base /run/build /app/build
